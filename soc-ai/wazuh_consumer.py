@@ -15,7 +15,25 @@ from database import save_analysis
 
 load_dotenv()
 
-WAZUH_HOST = os.getenv("WAZUH_HOST", "https://localhost:55000")
+
+def get_wsl2_ip() -> str:
+    """Descobre o IP atual do WSL2 dinamicamente."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["wsl", "-d", "Ubuntu", "-e", "bash", "-c",
+             "ip addr show eth0 | grep 'inet ' | awk '{print $2}' | cut -d/ -f1"],
+            capture_output=True, text=True, timeout=10
+        )
+        ip = result.stdout.strip()
+        if ip:
+            return f"https://{ip}:55000"
+    except Exception:
+        pass
+    return "https://172.20.160.27:55000"  # fallback
+
+
+WAZUH_HOST = os.getenv("WAZUH_HOST") or get_wsl2_ip()
 WAZUH_USER = os.getenv("WAZUH_USER", "wazuh-wui")
 WAZUH_PASS = os.getenv("WAZUH_PASS", "MyS3cr37P450r.*-")
 MIN_LEVEL   = int(os.getenv("WAZUH_MIN_LEVEL", "10"))   # nível mínimo de alerta
