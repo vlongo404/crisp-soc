@@ -1,0 +1,54 @@
+name: Resposta a DNS Tunneling
+version: "1.0"
+trigger:
+  wazuh_rule_ids: [100887]
+  zeek_condition: "dns_query_rate > 500/min"
+  mitre_technique: T1071.004
+
+steps:
+  - id: detect
+    name: Zeek detectou anomalia DNS (>10x baseline)
+    action: log
+    description: Volume DNS muito acima do baseline histórico
+    timeout: 30s
+
+  - id: wazuh_correlate
+    name: Wazuh correlaciona tráfego interno
+    action: query_wazuh
+    filter:
+      agent: "{{ host }}"
+      timeframe: "5m"
+    timeout: 30s
+
+  - id: ai_analysis
+    name: IA — T1071.004 — exfiltração via DNS
+    action: http_post
+    url: http://localhost:8000/analyze
+    body: "{{ wazuh_events }}"
+    timeout: 120s
+
+  - id: block_dns
+    name: FortiGate bloqueia DNS externo
+    action: http_post
+    url: "{{ fortigate_api }}/api/v2/cmdb/firewall/policy"
+    body:
+      action: deny
+      service: DNS
+      srcaddr: "{{ host_ip }}"
+      dstaddr: all
+    condition: "ai_result.priority in ['CRÍTICO', 'ALTO']"
+    timeout: 60s
+
+  - id: quarantine
+    name: FortiNAC move host para VLAN-Quarentena
+    action: radius_coa
+    nas_ip: "{{ switch_ip }}"
+    vlan: quarantine
+    timeout: 60s
+
+  - id: export_logs
+    name: Exportar dns.log e conn.log
+    action: copy_file
+    src: /opt/zeek/logs/current/dns.log
+    dst: /opt/crisp-soc/evidence/{{ incident_id }}_dns.log
+    timeout: 30s

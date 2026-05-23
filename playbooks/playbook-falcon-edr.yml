@@ -1,0 +1,49 @@
+name: Resposta a Detecção Falcon EDR
+version: "1.0"
+trigger:
+  falcon_event_type: DetectionSummaryEvent
+  min_severity: 4
+
+steps:
+  - id: stream
+    name: Falcon recebe DetectionSummaryEvent (sev≥4)
+    action: log
+    description: Severity >= 4 aciona flush imediato para o pipeline de IA
+    timeout: 10s
+
+  - id: flush
+    name: Flush imediato para analyzer.py
+    action: internal
+    module: falcon_consumer.analyze_batch
+    timeout: 5s
+
+  - id: ai_analysis
+    name: IA analisa via Ollama — build_falcon_prompt
+    action: http_post
+    url: http://localhost:8000/analyze
+    body: "{{ falcon_events }}"
+    timeout: 120s
+
+  - id: soar
+    name: Acionar playbook FortiSOAR
+    action: http_post
+    url: "{{ fortisoar_api }}/api/v3/playbooks/execute"
+    body:
+      playbook: Falcon-Detection-Response
+      alert: "{{ falcon_event }}"
+    timeout: 30s
+
+  - id: isolate
+    name: Endpoint para VLAN-Quarentena
+    action: radius_coa
+    condition: "ai_result.priority in ['CRÍTICO', 'ALTO']"
+    nas_ip: "{{ switch_ip }}"
+    vlan: quarantine
+    timeout: 60s
+
+  - id: save
+    name: save_analysis() → Postgres
+    action: db_insert
+    table: analyses
+    data: "{{ ai_result }}"
+    timeout: 10s

@@ -1,0 +1,35 @@
+# Credenciais e segredos — NUNCA subir
+proxy/.env
+**/.env
+**/.env.*
+!**/.env.example
+
+# Node
+node_modules/
+docx-gen/node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Arquivos gerados / temporários
+*.log
+*.tmp
+*.bak
+
+# Wazuh / Docker volumes (dados locais grandes)
+wazuh/wazuh-docker/single-node/wazuh-indexer-data/
+wazuh/wazuh-docker/single-node/wazuh-manager-data/
+
+# Arquivos do Windows
+Thumbs.db
+desktop.ini
+
+# IDEs
+.vscode/
+.idea/

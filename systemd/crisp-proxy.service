@@ -1,0 +1,14 @@
+[Unit]
+Description=CRISP FortiGate Proxy
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/opt/crisp-soc/proxy
+EnvironmentFile=/opt/crisp-soc/proxy/.env
+ExecStart=/opt/crisp-soc/proxy/venv/bin/python proxy_fortigate.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

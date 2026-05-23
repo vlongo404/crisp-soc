@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CRISP — NG-SOC</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #060810;
+  --s1:       #0a0e1a;
+  --s2:       #0f1525;
+  --s3:       #161e30;
+  --b1:       rgba(255,255,255,.05);
+  --b2:       rgba(255,255,255,.10);
+  --text:     #dde2f0;
+  --muted:    #4a5570;
+  --dim:      #1e2840;
+  --fg:  #3b82f6; --fg-bg: rgba(59,130,246,.07);
+  --wz:  #22d3a0; --wz-bg: rgba(34,211,160,.07);
+  --zk:  #06c8d8; --zk-bg: rgba(6,200,216,.07);
+  --cs:  #ff6b35; --cs-bg: rgba(255,107,53,.07);
+  --ai:  #a78bfa; --ai-bg: rgba(167,139,250,.07);
+  --ok:   #22d3a0; --ok-bg:   rgba(34,211,160,.08);
+  --warn: #f5a623; --warn-bg: rgba(245,166,35,.08);
+  --crit: #ff4d4d; --crit-bg: rgba(255,77,77,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+.mono{font-family:'IBM Plex Mono',monospace;}
+::-webkit-scrollbar{width:2px;height:2px;}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px;}
+
+/* ── HEADER ── */
+header{
+  height:48px;background:var(--s1);border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;padding:0 20px;gap:20px;flex-shrink:0;
+}
+.logo-mark{
+  width:26px;height:26px;background:var(--fg);border-radius:5px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#fff;
+}
+.logo-name{font-size:13px;font-weight:600;letter-spacing:2px;}
+.logo-sub{font-size:8px;color:var(--muted);letter-spacing:1px;}
+.h-sep{width:1px;height:20px;background:var(--b2);}
+.h-pill{
+  display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:20px;
+  font-size:10px;font-weight:500;border:1px solid;transition:all .3s;
+}
+.h-pill.ok{color:var(--ok);border-color:rgba(34,211,160,.25);background:var(--ok-bg);}
+.h-pill.warn{color:var(--warn);border-color:rgba(245,166,35,.25);background:var(--warn-bg);}
+.h-pill.crit{color:var(--crit);border-color:rgba(255,77,77,.25);background:var(--crit-bg);animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 3px rgba(255,77,77,.12)}}
+.dot{width:5px;height:5px;border-radius:50%;}
+.dot.ok{background:var(--ok);animation:blink 2s infinite;}
+.dot.warn{background:var(--warn);animation:blink .8s infinite;}
+.dot.crit{background:var(--crit);animation:blink .4s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+.h-right{margin-left:auto;display:flex;align-items:center;gap:14px;}
+.h-clock{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);}
+.h-btn{
+  display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:5px;
+  font-size:10px;font-weight:500;color:var(--muted);background:var(--s2);
+  border:1px solid var(--b2);cursor:pointer;transition:all .2s;font-family:'IBM Plex Sans',sans-serif;
+}
+.h-btn:hover{color:var(--text);border-color:var(--fg);}
+.h-btn svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;}
+
+/* backend status chips */
+.be-chip{display:flex;align-items:center;gap:4px;font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 8px;border-radius:10px;border:1px solid var(--b2);color:var(--muted);}
+.be-chip.live{color:var(--ok);border-color:rgba(34,211,160,.25);}
+.be-chip.down{color:var(--muted);border-color:var(--b1);}
+.be-dot{width:4px;height:4px;border-radius:50%;background:currentColor;}
+
+/* ── INCIDENT BANNER ── */
+#banner{
+  display:none;padding:8px 20px;background:var(--crit-bg);
+  border-bottom:1px solid rgba(255,77,77,.15);flex-shrink:0;
+  animation:slide-down .2s ease;
+}
+@keyframes slide-down{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.banner-inner{display:flex;align-items:center;justify-content:space-between;}
+.banner-l{display:flex;align-items:center;gap:10px;}
+.banner-dot{font-size:14px;color:var(--crit);animation:blink .4s infinite;}
+.banner-title{font-size:11px;font-weight:600;color:var(--crit);}
+.banner-sub{font-size:9px;color:rgba(255,77,77,.6);margin-top:1px;}
+#b-timer{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;color:var(--crit);}
+
+/* ── FLOW BAR ── */
+.flow-bar{
+  height:36px;background:var(--s1);border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;padding:0 20px;gap:0;flex-shrink:0;overflow:hidden;
+}
+.flow-node{
+  display:flex;align-items:center;gap:6px;padding:4px 12px;
+  border:1px solid var(--b1);border-radius:4px;background:var(--s2);
+  font-size:9px;font-weight:500;font-family:'IBM Plex Mono',monospace;
+  letter-spacing:.3px;transition:all .3s;cursor:default;white-space:nowrap;
+}
+.flow-node.active-fg{border-color:rgba(59,130,246,.4);color:var(--fg);background:var(--fg-bg);}
+.flow-node.active-wz{border-color:rgba(34,211,160,.4);color:var(--wz);background:var(--wz-bg);}
+.flow-node.active-zk{border-color:rgba(6,200,216,.4);color:var(--zk);background:var(--zk-bg);}
+.flow-node.active-cs{border-color:rgba(255,107,53,.4);color:var(--cs);background:var(--cs-bg);}
+.flow-node.active-ai{border-color:rgba(167,139,250,.4);color:var(--ai);background:var(--ai-bg);}
+.flow-node.alert-node{border-color:rgba(255,77,77,.5)!important;color:var(--crit)!important;background:var(--crit-bg)!important;animation:pulse .8s infinite;}
+.flow-arr{font-size:10px;color:var(--muted);padding:0 6px;flex-shrink:0;transition:color .3s;}
+.flow-arr.lit{color:var(--ok);}
+.flow-arr.lit-warn{color:var(--warn);}
+
+/* ── MAIN LAYOUT ── */
+.layout{
+  flex:1;display:grid;
+  grid-template-columns:240px 1fr 280px;
+  grid-template-rows:1fr;
+  gap:1px;background:var(--b1);overflow:hidden;
+}
+
+/* ── PANEL ── */
+.panel{background:var(--s1);display:flex;flex-direction:column;overflow:hidden;}
+.panel-hdr{
+  padding:10px 14px;border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.panel-title{font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text);}
+.panel-badge{font-size:8px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+.panel-body{padding:10px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;}
+
+/* ── TOOL CARDS ── */
+.tool-card{background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:9px 11px;transition:border-color .2s;}
+.tool-card:hover{border-color:var(--b2);}
+.tc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.tc-name{font-size:11px;font-weight:600;}
+.tc-badge{font-family:'IBM Plex Mono',monospace;font-size:8px;padding:2px 6px;border-radius:3px;border:1px solid;}
+.ok-badge{color:var(--ok);border-color:rgba(34,211,160,.3);background:var(--ok-bg);}
+.warn-badge{color:var(--warn);border-color:rgba(245,166,35,.3);background:var(--warn-bg);}
+.crit-badge{color:var(--crit);border-color:rgba(255,77,77,.3);background:var(--crit-bg);}
+.tc-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.tc-kpi{background:var(--s1);border-radius:5px;padding:5px 7px;border:1px solid var(--b1);}
+.tc-kpi-lbl{font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;}
+.tc-kpi-val{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;}
+
+/* ── EVENT FEED ── */
+.ev{
+  display:flex;gap:6px;padding:6px 8px;border-radius:5px;
+  background:var(--s2);border-left:2px solid;
+  font-family:'IBM Plex Mono',monospace;font-size:9px;
+  animation:ev-in .15s ease;flex-shrink:0;
+}
+@keyframes ev-in{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:translateX(0)}}
+.ev.info{border-color:var(--fg);}
+.ev.ok{border-color:var(--ok);}
+.ev.warn{border-color:var(--warn);}
+.ev.crit{border-color:var(--crit);}
+.ev.zeek{border-color:var(--zk);}
+.ev.falcon{border-color:var(--cs);}
+.ev.ai{border-color:var(--ai);}
+.ev.wazuh{border-color:var(--wz);}
+.ev-src{flex-shrink:0;}
+.ev-time{color:var(--dim);flex-shrink:0;}
+.ev-msg{flex:1;line-height:1.4;color:var(--text);}
+
+/* ── AI ANALYSIS PANEL ── */
+.ai-panel{background:var(--ai-bg);border:1px solid rgba(167,139,250,.15);border-radius:7px;padding:10px;flex-shrink:0;}
+.ai-panel-title{font-size:8px;color:var(--ai);font-family:'IBM Plex Mono',monospace;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.ai-thinking{display:flex;gap:2px;align-items:center;}
+.ai-dot-anim{width:4px;height:4px;border-radius:50%;background:var(--ai);animation:ai-pulse 1.2s infinite;}
+.ai-dot-anim:nth-child(2){animation-delay:.2s;}
+.ai-dot-anim:nth-child(3){animation-delay:.4s;}
+@keyframes ai-pulse{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
+.ai-result{font-size:9px;font-family:'IBM Plex Mono',monospace;line-height:1.6;color:var(--text);}
+.ai-priority{display:inline-block;padding:1px 6px;border-radius:3px;font-size:8px;font-weight:600;margin-bottom:5px;}
+.ai-finding{padding:4px 7px;background:var(--s2);border-radius:4px;margin-top:4px;border-left:2px solid var(--ai);}
+.ai-badge{font-size:7px;font-family:'IBM Plex Mono',monospace;padding:1px 5px;border-radius:2px;margin-left:6px;}
+.ai-badge.real{background:rgba(34,211,160,.1);color:var(--ok);border:1px solid rgba(34,211,160,.2);}
+.ai-badge.sim{background:rgba(167,139,250,.1);color:var(--ai);border:1px solid rgba(167,139,250,.2);}
+
+/* ── PLAYBOOK PANEL ── */
+.playbook-panel{background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:10px;flex-shrink:0;}
+.pb-title{font-size:8px;color:var(--muted);font-family:'IBM Plex Mono',monospace;letter-spacing:.5px;text-transform:uppercase;margin-bottom:7px;}
+.pb-step{
+  display:flex;align-items:flex-start;gap:7px;padding:5px 7px;
+  border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:9px;
+  margin-bottom:3px;transition:all .3s;
+}
+.pb-step.pending{background:var(--s1);color:var(--muted);border:1px solid var(--b1);}
+.pb-step.running{background:rgba(245,166,35,.06);color:var(--warn);border:1px solid rgba(245,166,35,.2);animation:pulse .8s infinite;}
+.pb-step.done{background:rgba(34,211,160,.05);color:var(--ok);border:1px solid rgba(34,211,160,.15);}
+.pb-step.failed{background:var(--crit-bg);color:var(--crit);border:1px solid rgba(255,77,77,.2);}
+.pb-icon{flex-shrink:0;margin-top:1px;}
+
+/* ── RESPONSE PANEL ── */
+.mode-box{background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:11px;display:flex;align-items:center;gap:10px;transition:all .3s;flex-shrink:0;}
+.mode-box.active{border-color:rgba(255,77,77,.3);background:rgba(255,77,77,.04);}
+.mode-icon{font-size:20px;}
+.mode-name{font-size:13px;font-weight:600;color:var(--muted);}
+.mode-name.active{color:var(--crit);}
+.mode-desc{font-size:9px;color:var(--muted);margin-top:2px;}
+
+/* ── RISK BARS ── */
+.risk-item{background:var(--s2);border:1px solid var(--b1);border-radius:6px;padding:8px 10px;flex-shrink:0;}
+.risk-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.risk-name{font-size:10px;font-weight:500;}
+.risk-action{font-size:8px;font-family:'IBM Plex Mono',monospace;color:var(--fg);}
+.risk-row{display:flex;align-items:center;gap:7px;margin-bottom:3px;}
+.risk-lbl{font-size:8px;color:var(--muted);width:45px;flex-shrink:0;}
+.risk-track{flex:1;height:3px;border-radius:2px;background:var(--dim);overflow:hidden;}
+.risk-fill{height:100%;border-radius:2px;transition:width .8s ease;}
+.risk-num{font-size:8px;font-family:'IBM Plex Mono',monospace;width:24px;text-align:right;flex-shrink:0;}
+
+/* ── ACTION LOG ── */
+.act-item{
+  display:flex;align-items:flex-start;gap:7px;padding:6px 8px;
+  background:var(--s2);border:1px solid var(--b1);border-radius:5px;
+  font-family:'IBM Plex Mono',monospace;font-size:9px;
+  animation:ev-in .15s ease;flex-shrink:0;
+}
+.act-ico{flex-shrink:0;}
+.act-txt{flex:1;line-height:1.4;}
+.act-time{color:var(--muted);flex-shrink:0;font-size:8px;}
+
+/* ── DEMO BAR ── */
+.demo-bar{background:var(--s1);border-top:1px solid var(--b1);padding:6px 20px;display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.demo-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;flex-shrink:0;}
+.dbtn{
+  padding:4px 11px;border-radius:4px;font-size:10px;font-weight:500;cursor:pointer;
+  border:1px solid;transition:all .15s;font-family:'IBM Plex Sans',sans-serif;
+  display:flex;align-items:center;gap:4px;
+}
+.dbtn:disabled{opacity:.3;cursor:not-allowed;}
+.dbtn-r{background:var(--crit-bg);border-color:rgba(255,77,77,.3);color:var(--crit);}
+.dbtn-r:hover:not(:disabled){background:rgba(255,77,77,.14);}
+.dbtn-y{background:var(--warn-bg);border-color:rgba(245,166,35,.3);color:var(--warn);}
+.dbtn-y:hover:not(:disabled){background:rgba(245,166,35,.14);}
+.dbtn-b{background:var(--fg-bg);border-color:rgba(59,130,246,.3);color:var(--fg);}
+.dbtn-b:hover:not(:disabled){background:rgba(59,130,246,.14);}
+.dbtn-c{background:var(--zk-bg);border-color:rgba(6,200,216,.3);color:var(--zk);}
+.dbtn-c:hover:not(:disabled){background:rgba(6,200,216,.14);}
+.dbtn-o{background:var(--cs-bg);border-color:rgba(255,107,53,.3);color:var(--cs);}
+.dbtn-o:hover:not(:disabled){background:rgba(255,107,53,.14);}
+.dbtn-g{background:var(--ok-bg);border-color:rgba(34,211,160,.3);color:var(--ok);}
+.dbtn-g:hover{background:rgba(34,211,160,.14);}
+.dbtn-ghost{background:var(--s2);border-color:var(--b2);color:var(--muted);}
+.dbtn-ghost:hover{color:var(--text);}
+.sv{width:1px;height:16px;background:var(--b2);margin:0 3px;}
+
+/* ── MODAL ── */
+.modal-ov{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);align-items:center;justify-content:center;}
+.modal-ov.open{display:flex;}
+.modal{background:var(--s1);border:1px solid var(--b2);border-radius:10px;width:460px;padding:22px;display:flex;flex-direction:column;gap:18px;}
+.modal h3{font-size:14px;font-weight:600;}
+.modal p{font-size:11px;color:var(--muted);}
+.wg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.wg-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:7px;background:var(--s2);border:1px solid var(--b1);cursor:pointer;transition:border-color .2s;user-select:none;}
+.wg-item:hover{border-color:var(--b2);}
+.wg-item.on{border-color:rgba(59,130,246,.35);}
+.wg-info{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:500;}
+.sw{width:30px;height:16px;border-radius:8px;background:var(--dim);position:relative;transition:background .2s;flex-shrink:0;}
+.sw.on{background:var(--fg);}
+.sw-k{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:#fff;transition:transform .2s;}
+.sw.on .sw-k{transform:translateX(14px);}
+.modal-foot{display:flex;justify-content:flex-end;gap:7px;}
+.mbtn{padding:6px 16px;border-radius:5px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid;font-family:'IBM Plex Sans',sans-serif;}
+.mbtn.pri{background:var(--fg);border-color:var(--fg);color:#fff;}
+.mbtn.sec{background:transparent;border-color:var(--b2);color:var(--muted);}
+.hidden-w{display:none!important;}
+
+/* ── NET MAP ── */
+.net-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+.net-node{background:var(--s2);border:1px solid var(--b1);border-radius:5px;padding:6px 4px;text-align:center;font-size:8px;color:var(--muted);transition:all .3s;}
+.net-node .ni{font-size:14px;display:block;margin-bottom:2px;}
+.net-node.ok{border-color:rgba(34,211,160,.3);color:var(--ok);background:var(--ok-bg);}
+.net-node.warn{border-color:rgba(245,166,35,.3);color:var(--warn);background:var(--warn-bg);}
+.net-node.crit{border-color:rgba(255,77,77,.3);color:var(--crit);background:var(--crit-bg);animation:pulse .8s infinite;}
+.net-node.quar{border-color:rgba(59,130,246,.3);color:var(--fg);background:var(--fg-bg);}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-mark">C</div>
+  <div><div class="logo-name">CRISP</div><div class="logo-sub">NG-SOC PLATFORM</div></div>
+  <div class="h-sep"></div>
+  <div class="h-pill ok" id="h-status">
+    <span class="dot ok" id="h-dot"></span>
+    <span id="h-text">TODOS OS SISTEMAS OPERACIONAIS</span>
+  </div>
+  <!-- Backend status chips -->
+  <div class="be-chip down" id="chip-proxy" title="FortiGate Proxy localhost:5000">
+    <span class="be-dot"></span>FG-PROXY
+  </div>
+  <div class="be-chip down" id="chip-ai" title="AI Pipeline localhost:8000">
+    <span class="be-dot"></span>AI-API
+  </div>
+  <div class="h-right">
+    <button class="h-btn" onclick="openModal()">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Painéis
+    </button>
+    <div class="h-clock mono" id="clock">--:--:--</div>
+  </div>
+</header>
+
+<!-- INCIDENT BANNER -->
+<div id="banner">
+  <div class="banner-inner">
+    <div class="banner-l">
+      <span class="banner-dot">●</span>
+      <div><div class="banner-title" id="b-title">INCIDENTE ATIVO</div><div class="banner-sub" id="b-sub"></div></div>
+    </div>
+    <div id="b-timer" class="mono">00:00</div>
+  </div>
+</div>
+
+<!-- FLOW BAR -->
+<div class="flow-bar">
+  <div class="flow-node active-fg" id="fn-fg">🔥 FORTIGATE</div>
+  <div class="flow-arr" id="fa-1">──▶</div>
+  <div class="flow-node active-zk" id="fn-zk">🔵 ZEEK / SURICATA</div>
+  <div class="flow-arr" id="fa-2">──▶</div>
+  <div class="flow-node active-wz" id="fn-wz">🛡 WAZUH</div>
+  <div class="flow-arr" id="fa-3">──▶</div>
+  <div class="flow-node active-ai" id="fn-ai">🧠 MODELO IA</div>
+  <div class="flow-arr" id="fa-4">──▶</div>
+  <div class="flow-node active-fg" id="fn-dash" style="color:var(--text);border-color:var(--b2);background:var(--s3);">📊 CRISP</div>
+  <div class="flow-arr" style="transform:scaleX(-1);color:var(--muted);">──▶</div>
+  <div class="flow-node active-cs" id="fn-cs">🦅 FALCON EDR</div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div class="layout">
+
+  <!-- LEFT: Fontes de Telemetria -->
+  <div class="panel" id="wp-tools">
+    <div class="panel-hdr">
+      <span class="panel-title">Fontes de Telemetria</span>
+      <span class="panel-badge">STACK · AO VIVO</span>
+    </div>
+    <div class="panel-body">
+
+      <!-- FortiGate -->
+      <div class="tool-card">
+        <div class="tc-top">
+          <span class="tc-name" style="color:var(--fg);">🔥 FortiGate</span>
+          <span class="tc-badge ok-badge" id="fg-badge">AO VIVO</span>
+        </div>
+        <div class="tc-grid">
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Sessões</div><div class="tc-kpi-val" style="color:var(--fg);" id="fg-sess">—</div></div>
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Políticas</div><div class="tc-kpi-val" style="color:var(--fg);" id="fg-pol">—</div></div>
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Setup/s</div><div class="tc-kpi-val" style="color:var(--ai);" id="fg-rate">—</div></div>
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Bytes</div><div class="tc-kpi-val" style="color:var(--warn);" id="fg-bytes">—</div></div>
+        </div>
+        <div style="font-size:7px;color:var(--muted);margin-top:5px;" id="fg-ts">proxy: localhost:5000</div>
+      </div>
+
+      <!-- Wazuh -->
+      <div class="tool-card" id="wp-wazuh">
+        <div class="tc-top">
+          <span class="tc-name" style="color:var(--wz);">🛡 Wazuh SIEM</span>
+          <span class="tc-badge ok-badge">OK</span>
+        </div>
+        <div class="tc-grid">
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Agentes</div><div class="tc-kpi-val" style="color:var(--wz);" id="wz-agents">247</div></div>
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Alertas/h</div><div class="tc-kpi-val" style="color:var(--warn);" id="wz-alerts">0</div></div>
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Eventos/s</div><div class="tc-kpi-val" style="color:var(--wz);" id="wz-eps">—</div></div>
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Regras</div><div class="tc-kpi-val" style="color:var(--muted);" id="wz-rules">3.2k</div></div>
+        </div>
+      </div>
+
+      <!-- Zeek/Suricata -->
+      <div class="tool-card" id="wp-zeek">
+        <div class="tc-top">
+          <span class="tc-name" style="color:var(--zk);">🔵 Zeek / Suricata</span>
+          <span class="tc-badge ok-badge">NIDS</span>
+        </div>
+        <div class="tc-grid">
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Conexões/min</div><div class="tc-kpi-val" style="color:var(--zk);" id="zk-conns">—</div></div>
+          <div class="tc-kpi"><div class="tc-kpi-lbl">DNS/min</div><div class="tc-kpi-val" style="color:var(--zk);" id="zk-dns">—</div></div>
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Alertas NDR</div><div class="tc-kpi-val" style="color:var(--ok);" id="zk-ndralerts">0</div></div>
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Hosts</div><div class="tc-kpi-val" style="color:var(--muted);" id="zk-hosts">—</div></div>
+        </div>
+        <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:6px;" id="zk-proto">
+          <span style="font-size:7px;padding:1px 5px;border-radius:2px;background:var(--zk-bg);color:var(--zk);font-family:'IBM Plex Mono',monospace;border:1px solid rgba(6,200,216,.2);">HTTP</span>
+          <span style="font-size:7px;padding:1px 5px;border-radius:2px;background:var(--zk-bg);color:var(--zk);font-family:'IBM Plex Mono',monospace;border:1px solid rgba(6,200,216,.2);">DNS</span>
+          <span style="font-size:7px;padding:1px 5px;border-radius:2px;background:var(--zk-bg);color:var(--zk);font-family:'IBM Plex Mono',monospace;border:1px solid rgba(6,200,216,.2);">TLS</span>
+          <span style="font-size:7px;padding:1px 5px;border-radius:2px;background:var(--zk-bg);color:var(--zk);font-family:'IBM Plex Mono',monospace;border:1px solid rgba(6,200,216,.2);">SMB</span>
+          <span style="font-size:7px;padding:1px 5px;border-radius:2px;background:var(--zk-bg);color:var(--zk);font-family:'IBM Plex Mono',monospace;border:1px solid rgba(6,200,216,.2);">SSH</span>
+        </div>
+      </div>
+
+      <!-- Falcon -->
+      <div class="tool-card" id="wp-falcon">
+        <div class="tc-top">
+          <span class="tc-name" style="color:var(--cs);">🦅 CrowdStrike Falcon</span>
+          <span class="tc-badge" style="color:var(--cs);border-color:rgba(255,107,53,.3);background:var(--cs-bg);">STREAM</span>
+        </div>
+        <div class="tc-grid">
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Detecções</div><div class="tc-kpi-val" style="color:var(--cs);" id="cs-det">0</div></div>
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Hosts Prot.</div><div class="tc-kpi-val" style="color:var(--ok);" id="cs-hosts">247</div></div>
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Bloqueados</div><div class="tc-kpi-val" style="color:var(--ok);" id="cs-blocked">0</div></div>
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Severidade</div><div class="tc-kpi-val" style="color:var(--muted);" id="cs-sev">—</div></div>
+        </div>
+        <div style="font-size:7px;color:var(--muted);margin-top:5px;" id="cs-ts">stream: /sensors/entities/datafeed/v2</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CENTER: Feed de Eventos -->
+  <div class="panel" id="wp-feed">
+    <div class="panel-hdr">
+      <span class="panel-title">Feed de Eventos</span>
+      <span class="panel-badge" id="ev-count">0 eventos</span>
+    </div>
+
+    <!-- Mapa de Rede -->
+    <div style="padding:10px;border-bottom:1px solid var(--b1);flex-shrink:0;" id="wp-netmap">
+      <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:7px;">Segmentos de Rede</div>
+      <div class="net-grid">
+        <div class="net-node ok" id="n-core"><span class="ni">🖥️</span>Core</div>
+        <div class="net-node ok" id="n-users"><span class="ni">👥</span>Usuários</div>
+        <div class="net-node ok" id="n-dmz"><span class="ni">🌐</span>DMZ</div>
+        <div class="net-node ok" id="n-ot"><span class="ni">⚙️</span>OT/IoT</div>
+        <div class="net-node ok" id="n-vpn"><span class="ni">🔒</span>VPN</div>
+        <div class="net-node ok" id="n-cloud"><span class="ni">☁️</span>Cloud</div>
+        <div class="net-node ok" id="n-vendor"><span class="ni">🔧</span>Vendor</div>
+        <div class="net-node ok" id="n-mgmt"><span class="ni">📡</span>Gestão</div>
+      </div>
+    </div>
+
+    <div id="feed" style="padding:10px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:4px;"></div>
+  </div>
+
+  <!-- RIGHT: Motor de Resposta + IA + Playbook -->
+  <div class="panel" id="wp-response">
+    <div class="panel-hdr">
+      <span class="panel-title">Resposta & IA</span>
+      <span class="panel-badge">WAZUH · MODELO · SOAR</span>
+    </div>
+    <div style="padding:10px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:7px;">
+
+      <!-- Modo de Resposta -->
+      <div class="mode-box" id="mode-box">
+        <div class="mode-icon" id="mode-icon">🛡️</div>
+        <div>
+          <div class="mode-name" id="mode-name">INATIVO</div>
+          <div class="mode-desc" id="mode-desc">Aguardando eventos do pipeline</div>
+        </div>
+      </div>
+
+      <!-- Score de Risco -->
+      <div id="wp-risk">
+        <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;">Score de Risco</div>
+        <div id="risk-list">
+          <div style="font-size:9px;color:var(--muted);text-align:center;padding:8px;font-family:'IBM Plex Mono',monospace;">Nenhum ativo em análise</div>
+        </div>
+      </div>
+
+      <!-- IA Analysis -->
+      <div id="wp-ai">
+        <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;">Análise do Modelo IA</div>
+        <div class="ai-panel" id="ai-panel">
+          <div class="ai-panel-title">🧠 MODELO — AGUARDANDO</div>
+          <div class="ai-result" id="ai-content" style="color:var(--muted);font-size:9px;">
+            Nenhum evento enviado ao modelo ainda.<br>
+            Pipeline: Wazuh → analyzer.py → Ollama → CRISP
+          </div>
+        </div>
+      </div>
+
+      <!-- Playbook -->
+      <div id="wp-playbook">
+        <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;">Playbook Automatizado</div>
+        <div class="playbook-panel" id="playbook-panel">
+          <div class="pb-title" id="pb-name">Nenhum playbook ativo</div>
+          <div id="pb-steps">
+            <div style="font-size:9px;color:var(--muted);font-family:'IBM Plex Mono',monospace;">Aguardando incidente...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ações Executadas -->
+      <div>
+        <div style="font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px;">Ações Executadas</div>
+        <div id="actions">
+          <div data-empty style="font-size:9px;color:var(--muted);text-align:center;padding:8px;font-family:'IBM Plex Mono',monospace;">Aguardando...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- DEMO BAR -->
+<div class="demo-bar">
+  <span class="demo-lbl">Demo:</span>
+  <button class="dbtn dbtn-r" id="btn1" onclick="runRansomware()">● Ransomware</button>
+  <button class="dbtn dbtn-y" id="btn2" onclick="runLateral()">● Mov. Lateral</button>
+  <button class="dbtn dbtn-c" id="btn3" onclick="runZeekTunnel()">● DNS Tunneling</button>
+  <button class="dbtn dbtn-o" id="btn4" onclick="runFalcon()">🦅 Falcon EDR</button>
+  <div class="sv"></div>
+  <button class="dbtn dbtn-g" onclick="fetchFG()">↺ API FortiGate</button>
+  <button class="dbtn dbtn-ghost" onclick="doReset()" style="margin-left:auto;">Reiniciar</button>
+  <span id="last-sync" class="mono" style="font-size:8px;color:var(--muted);"></span>
+</div>
+
+<!-- MODAL PAINÉIS -->
+<div class="modal-ov" id="modal">
+  <div class="modal">
+    <div><h3>Personalizar Painéis</h3><p>Ative ou desative seções conforme sua necessidade</p></div>
+    <div class="wg-grid" id="wg-list"></div>
+    <div class="modal-foot">
+      <button class="mbtn sec" onclick="closeModal()">Cancelar</button>
+      <button class="mbtn pri" onclick="applyLayout()">Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════
+const PROXY  = 'http://localhost:5000';
+const AI_URL = 'http://localhost:8000';
+
+// ══════════════════════════════════════════════════════════════
+// WIDGET REGISTRY
+// ══════════════════════════════════════════════════════════════
+const WIDGETS = [
+  { id:'wp-tools',    name:'Fontes de Telemetria', icon:'📡', on:true },
+  { id:'wp-feed',     name:'Feed de Eventos',      icon:'📋', on:true },
+  { id:'wp-response', name:'Resposta & IA',         icon:'⚡', on:true },
+  { id:'wp-netmap',   name:'Mapa de Rede',          icon:'🌐', on:true },
+  { id:'wp-wazuh',    name:'Wazuh SIEM',            icon:'🛡', on:true },
+  { id:'wp-zeek',     name:'Zeek/Suricata',         icon:'🔵', on:true },
+  { id:'wp-falcon',   name:'CrowdStrike Falcon',    icon:'🦅', on:true },
+  { id:'wp-ai',       name:'Análise IA',            icon:'🧠', on:true },
+  { id:'wp-playbook', name:'Playbook YAML',         icon:'📜', on:true },
+  { id:'wp-risk',     name:'Score de Risco',        icon:'📈', on:true },
+];
+let pending = WIDGETS.map(w=>({...w}));
+
+function buildModal(){
+  const c = document.getElementById('wg-list'); c.innerHTML='';
+  pending.forEach((w,i)=>{
+    const el = document.createElement('div');
+    el.className='wg-item'+(w.on?' on':'');
+    el.innerHTML=`<div class="wg-info"><span>${w.icon}</span><span>${w.name}</span></div>
+      <div class="sw ${w.on?'on':''}" data-i="${i}"><div class="sw-k"></div></div>`;
+    el.onclick=()=>{ pending[i].on=!pending[i].on; buildModal(); };
+    c.appendChild(el);
+  });
+}
+function openModal(){ pending=WIDGETS.map(w=>({...w})); buildModal(); document.getElementById('modal').classList.add('open'); }
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+function applyLayout(){
+  pending.forEach((w,i)=>{ WIDGETS[i].on=w.on; const el=document.getElementById(w.id); if(el) el.classList.toggle('hidden-w',!w.on); });
+  closeModal();
+}
+
+// ══════════════════════════════════════════════════════════════
+// CLOCK & TIMER
+// ══════════════════════════════════════════════════════════════
+setInterval(()=>{ document.getElementById('clock').textContent=new Date().toLocaleTimeString('pt-BR',{hour12:false}); },1000);
+let timerInt=null, timerStart=null;
+function startTimer(){ timerStart=Date.now(); timerInt=setInterval(()=>{ const e=Math.floor((Date.now()-timerStart)/1000); document.getElementById('b-timer').textContent=`${String(Math.floor(e/60)).padStart(2,'0')}:${String(e%60).padStart(2,'0')}`; },1000); }
+function stopTimer(){ clearInterval(timerInt); timerInt=null; }
+
+// ══════════════════════════════════════════════════════════════
+// LOG / ACTION HELPERS
+// ══════════════════════════════════════════════════════════════
+let evCount=0;
+const SRCCOLOR={
+  '[FortiGate]':'var(--fg)','[Wazuh]':'var(--wz)','[Zeek]':'var(--zk)',
+  '[Suricata]':'var(--zk)','[Falcon]':'var(--cs)','[IA]':'var(--ai)',
+  '[CRISP]':'var(--crit)','[API]':'var(--fg)','[SOAR]':'var(--warn)',
+};
+function addLog(src,msg,cls='info',delay=0){
+  setTimeout(()=>{
+    const feed=document.getElementById('feed');
+    const t=new Date().toLocaleTimeString('pt-BR',{hour12:false});
+    const c=SRCCOLOR[src]||'var(--muted)';
+    const d=document.createElement('div');
+    d.className=`ev ${cls}`;
+    d.innerHTML=`<span class="ev-src" style="color:${c};">${src}</span><span class="ev-time">${t}</span><span class="ev-msg">${msg}</span>`;
+    feed.insertBefore(d,feed.firstChild);
+    while(feed.children.length>100) feed.removeChild(feed.lastChild);
+    evCount++; document.getElementById('ev-count').textContent=`${evCount} eventos`;
+  },delay);
+}
+function addAction(ico,txt,color='var(--ok)',delay=0){
+  setTimeout(()=>{
+    const box=document.getElementById('actions');
+    const emp=box.querySelector('[data-empty]'); if(emp) box.removeChild(emp);
+    const el=document.createElement('div'); el.className='act-item';
+    const t=new Date().toLocaleTimeString('pt-BR',{hour12:false});
+    el.innerHTML=`<span class="act-ico">${ico}</span><span class="act-txt" style="color:${color};">${txt}</span><span class="act-time">${t}</span>`;
+    box.insertBefore(el,box.firstChild);
+  },delay);
+}
+function setNode(id,cls,tip){ const el=document.getElementById(id); if(!el)return; el.className=`net-node ${cls}`; if(tip) el.title=tip; }
+function setMode(name,icon,desc,active){
+  document.getElementById('mode-name').textContent=name;
+  document.getElementById('mode-name').className='mode-name'+(active?' active':'');
+  document.getElementById('mode-icon').textContent=icon;
+  document.getElementById('mode-desc').textContent=desc;
+  document.getElementById('mode-box').className='mode-box'+(active?' active':'');
+}
+function setRisk(assets){
+  const el=document.getElementById('risk-list');
+  el.innerHTML=assets.map(({name,risk,impact,action})=>{
+    const rc=risk>70?'var(--crit)':risk>40?'var(--warn)':'var(--ok)';
+    const ic=impact>70?'var(--crit)':impact>40?'var(--warn)':'var(--ok)';
+    return `<div class="risk-item"><div class="risk-top"><span class="risk-name">${name}</span><span class="risk-action">${action}</span></div>
+      <div class="risk-row"><span class="risk-lbl">Risco</span><div class="risk-track"><div class="risk-fill" style="width:${risk}%;background:${rc};"></div></div><span class="risk-num" style="color:${rc};">${risk}</span></div>
+      <div class="risk-row"><span class="risk-lbl">Impacto</span><div class="risk-track"><div class="risk-fill" style="width:${impact}%;background:${ic};"></div></div><span class="risk-num" style="color:${ic};">${impact}</span></div>
+    </div>`;
+  }).join('');
+}
+function setHeader(txt,cls){
+  ['ok','warn','crit'].forEach(c=>{ document.getElementById('h-status').classList.remove(c); document.getElementById('h-dot').classList.remove(c); });
+  document.getElementById('h-status').classList.add(cls);
+  document.getElementById('h-dot').classList.add(cls);
+  document.getElementById('h-text').textContent=txt;
+}
+function fmtBytes(b){ if(!b||b===0)return'0B'; const k=1024,s=['B','KB','MB','GB']; const i=Math.floor(Math.log(b)/Math.log(k)); return parseFloat((b/Math.pow(k,i)).toFixed(1))+s[i]; }
+function flowAlert(nodeId,arrId){
+  const n=document.getElementById(nodeId); if(n){ n.classList.add('alert-node'); setTimeout(()=>n.classList.remove('alert-node'),4000); }
+  const a=document.getElementById(arrId); if(a){ a.classList.add('lit-warn'); setTimeout(()=>{ a.classList.remove('lit-warn'); a.classList.add('lit'); setTimeout(()=>a.classList.remove('lit'),2000); },1500); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// PLAYBOOKS YAML
+// ══════════════════════════════════════════════════════════════
+const PLAYBOOKS = {
+  ransomware: {
+    name: 'playbook-ransomware.yml',
+    steps: [
+      { id:'detect',  label:'Wazuh: detectar extensões cifradas',       icon:'🔍' },
+      { id:'alert',   label:'FortiSIEM: correlacionar + escalar alerta', icon:'🚨' },
+      { id:'ai',      label:'IA: classificar (LockBit / MITRE T1486)',   icon:'🧠' },
+      { id:'isolate', label:'FortiNAC: VLAN-Quarentena via RADIUS CoA',  icon:'🔒' },
+      { id:'block',   label:'FortiGate: bloquear C2 + tráfego E-W',      icon:'🛡️' },
+      { id:'report',  label:'CRISP: salvar análise + gerar relatório',   icon:'📋' },
+    ]
+  },
+  lateral: {
+    name: 'playbook-lateral-movement.yml',
+    steps: [
+      { id:'detect',  label:'Zeek: detectar conn.log anômalo (SMB)',    icon:'🔍' },
+      { id:'wazuh',   label:'Wazuh: correlacionar com logs de host',    icon:'🛡' },
+      { id:'ai',      label:'IA: T1021.002 — pivot confirmado',         icon:'🧠' },
+      { id:'acl',     label:'FortiGate: ACL OT→Core bloqueada',         icon:'🔥' },
+      { id:'isolate', label:'FortiNAC: segmento OT isolado',            icon:'🔒' },
+      { id:'report',  label:'CRISP: exportar conn.log ao FortiAnalyzer',icon:'📋' },
+    ]
+  },
+  dns_tunnel: {
+    name: 'playbook-dns-tunneling.yml',
+    steps: [
+      { id:'detect',  label:'Zeek: anomalia DNS (>10x baseline)',       icon:'🔍' },
+      { id:'wazuh',   label:'Wazuh: correlacionar tráfego interno',     icon:'🛡' },
+      { id:'ai',      label:'IA: T1071.004 — exfiltração via DNS',      icon:'🧠' },
+      { id:'block',   label:'FortiGate: DNS externo bloqueado',          icon:'🔥' },
+      { id:'isolate', label:'FortiNAC: host → VLAN-Quarentena',         icon:'🔒' },
+      { id:'report',  label:'CRISP: dns.log exportado + relatório',     icon:'📋' },
+    ]
+  },
+  falcon_edr: {
+    name: 'playbook-falcon-edr.yml',
+    steps: [
+      { id:'stream',  label:'Falcon: DetectionSummaryEvent (sev≥4)',    icon:'🦅' },
+      { id:'flush',   label:'Falcon: flush imediato → analyzer.py',     icon:'⚡' },
+      { id:'ai',      label:'IA: build_falcon_prompt → Ollama',         icon:'🧠' },
+      { id:'soar',    label:'SOAR: playbook Falcon-Detection-Response',  icon:'⚙️' },
+      { id:'isolate', label:'FortiNAC: endpoint → VLAN-Quarentena',     icon:'🔒' },
+      { id:'report',  label:'CRISP: save_analysis() → Postgres',        icon:'📋' },
+    ]
+  }
+};
+
+let pbTimer = null;
+function runPlaybook(name, onDone){
+  const pb = PLAYBOOKS[name];
+  document.getElementById('pb-name').textContent = pb.name;
+  const stepsEl = document.getElementById('pb-steps');
+  stepsEl.innerHTML = pb.steps.map(s=>`
+    <div class="pb-step pending" id="pbs-${s.id}">
+      <span class="pb-icon">${s.icon}</span>
+      <span>${s.label}</span>
+    </div>`).join('');
+
+  let i=0;
+  function runNext(){
+    if(i>0){ document.getElementById(`pbs-${pb.steps[i-1].id}`).className='pb-step done'; }
+    if(i>=pb.steps.length){ if(onDone) onDone(); return; }
+    document.getElementById(`pbs-${pb.steps[i].id}`).className='pb-step running';
+    i++;
+    pbTimer = setTimeout(runNext, 2200);
+  }
+  runNext();
+}
+
+// ══════════════════════════════════════════════════════════════
+// IA ANALYSIS — REAL API + FALLBACK SIMULADO
+// ══════════════════════════════════════════════════════════════
+let aiOnline = false;
+
+function showAIThinking(){
+  document.getElementById('ai-panel').innerHTML=`
+    <div class="ai-panel-title">🧠 MODELO — ANALISANDO
+      <div class="ai-thinking"><div class="ai-dot-anim"></div><div class="ai-dot-anim"></div><div class="ai-dot-anim"></div></div>
+    </div>
+    <div class="ai-result" style="color:var(--muted);">Processando eventos...<br>Wazuh → analyzer.py → Ollama</div>`;
+}
+
+function showAIResult(priority, summary, findings, action, isReal=false){
+  const pcolor = priority==='CRÍTICO'?'var(--crit)':priority==='ALTO'?'var(--warn)':priority==='MÉDIO'?'var(--fg)':'var(--ok)';
+  const pbg    = priority==='CRÍTICO'?'var(--crit-bg)':priority==='ALTO'?'var(--warn-bg)':priority==='MÉDIO'?'var(--fg-bg)':'var(--ok-bg)';
+  const badge  = isReal
+    ? '<span class="ai-badge real">OLLAMA REAL</span>'
+    : '<span class="ai-badge sim">SIMULADO</span>';
+  const fhtml  = findings.map(f=>`<div class="ai-finding">
+    <div style="font-size:8px;color:var(--ai);margin-bottom:2px;">${f.type} · ${f.mitre||'—'} · ${f.confidence}</div>
+    <div style="font-size:9px;color:var(--text);">${f.desc||f.description||''}</div>
+  </div>`).join('');
+  document.getElementById('ai-panel').innerHTML=`
+    <div class="ai-panel-title">🧠 MODELO — ANÁLISE CONCLUÍDA${badge}</div>
+    <div class="ai-result">
+      <span class="ai-priority" style="background:${pbg};color:${pcolor};border:1px solid ${pcolor};opacity:.9;">${priority}</span>
+      <div style="color:var(--text);margin-bottom:6px;">${summary}</div>
+      ${fhtml}
+      <div style="margin-top:6px;padding:5px 7px;background:var(--s2);border-radius:4px;border-left:2px solid var(--warn);">
+        <span style="font-size:8px;color:var(--warn);">AÇÃO RECOMENDADA</span>
+        <div style="font-size:9px;color:var(--text);margin-top:2px;">${action}</div>
+      </div>
+    </div>`;
+}
+
+// Chama API real — retorna resultado ou null se offline
+async function callAI(events, source='dashboard'){
+  try {
+    const r = await fetch(`${AI_URL}/analyze`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ events, source }),
+    });
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+// Tenta IA real; se offline executa fallbackFn (simulado)
+async function tryAI(events, source, fallbackFn){
+  showAIThinking();
+  const result = await callAI(events, source);
+  if(result && result.priority){
+    const findings = (result.findings||[]).map(f=>({...f, desc: f.description||f.desc||''}));
+    showAIResult(result.priority, result.summary||'', findings, result.recommended_action||'—', true);
+    addLog('[IA]', `<span style="color:var(--ok);">[OLLAMA REAL] ${result.priority} · ${(result.summary||'').slice(0,60)}</span>`, 'ai');
+  } else {
+    fallbackFn();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// BACKEND HEALTH CHECK
+// ══════════════════════════════════════════════════════════════
+async function checkBackends(){
+  // FortiGate proxy
+  try {
+    const r = await fetch(`${PROXY}/health`, {signal: AbortSignal.timeout(3000)});
+    const ok = r.ok;
+    const chip = document.getElementById('chip-proxy');
+    chip.className = 'be-chip ' + (ok ? 'live' : 'down');
+    if(ok) addLog('[API]','<span style="color:var(--ok);">✓ Proxy FortiGate online (localhost:5000)</span>','ok');
+  } catch { /* proxy offline — chip stays down */ }
+
+  // AI API
+  try {
+    const r = await fetch(`${AI_URL}/health`, {signal: AbortSignal.timeout(3000)});
+    const ok = r.ok;
+    aiOnline = ok;
+    const chip = document.getElementById('chip-ai');
+    chip.className = 'be-chip ' + (ok ? 'live' : 'down');
+    if(ok){
+      const d = await r.json().catch(()=>({}));
+      addLog('[IA]', `<span style="color:var(--ok);">✓ AI API online — modelo: ${d.model||'?'}</span>`, 'ai');
+    }
+  } catch { aiOnline = false; }
+}
+
+// ══════════════════════════════════════════════════════════════
+// POLL /analyses — mostrar análises históricas no feed
+// ══════════════════════════════════════════════════════════════
+let seenAnalyses = new Set();
+async function pollAnalyses(){
+  try {
+    const r = await fetch(`${AI_URL}/analyses?limit=5`, {signal: AbortSignal.timeout(4000)});
+    if(!r.ok) return;
+    const {analyses} = await r.json();
+    if(!analyses) return;
+    analyses.forEach(a => {
+      if(seenAnalyses.has(a.id)) return;
+      seenAnalyses.add(a.id);
+      const pcolor = a.priority==='CRÍTICO'?'var(--crit)':a.priority==='ALTO'?'var(--warn)':'var(--fg)';
+      addLog('[IA]',
+        `<span style="color:${pcolor};">[${a.priority}]</span> [${a.source}] ${(a.summary||'').slice(0,80)}`,
+        a.priority==='CRÍTICO'?'crit':a.priority==='ALTO'?'warn':'ai'
+      );
+    });
+  } catch { /* AI offline */ }
+}
+
+// ══════════════════════════════════════════════════════════════
+// FORTIGATE API
+// ══════════════════════════════════════════════════════════════
+let fgConnected=false;
+let fgPrevRx=0, fgPrevTx=0, fgPrevTs=0;
+
+async function fetchFG(){
+  try {
+    const [st, p] = await Promise.all([
+      fetch(`${PROXY}/api/status`).then(r=>{ if(!r.ok)throw 0; return r.json(); }),
+      fetch(`${PROXY}/api/policies`).then(r=>{ if(!r.ok)throw 0; return r.json(); }),
+    ]);
+
+    if(!fgConnected){
+      fgConnected=true;
+      document.getElementById('chip-proxy').className='be-chip live';
+      addLog('[API]',`<span style="color:var(--ok);">✓ FortiGate ${st.results?.version||''} — serial: ${st.results?.serial||'?'} — dados ao vivo</span>`,'ok');
+      addAction('🔌','API REST FortiGate — conectado','var(--ok)');
+    }
+
+    const r = st.results || {};
+    const now = Date.now();
+
+    // Throughput: calcula delta rx+tx por segundo
+    let rateStr = '—';
+    if(fgPrevTs > 0 && now > fgPrevTs){
+      const dt = (now - fgPrevTs) / 1000;
+      const deltaRx = (r.total_rx||0) - fgPrevRx;
+      const deltaTx = (r.total_tx||0) - fgPrevTx;
+      const bps = (deltaRx + deltaTx) / dt;
+      rateStr = fmtBytes(bps)+'/s';
+    }
+    fgPrevRx = r.total_rx||0; fgPrevTx = r.total_tx||0; fgPrevTs = now;
+
+    // Policies
+    const pArr = Array.isArray(p?.results) ? p.results : [];
+
+    // UI update
+    document.getElementById('fg-sess').textContent = pArr.length > 0 ? pArr.length : '—';
+    document.getElementById('fg-rate').textContent = rateStr;
+    document.getElementById('fg-pol').textContent = pArr.filter(x=>(x.action||'')!=='').length || pArr.length || '0';
+    document.getElementById('fg-bytes').textContent = fmtBytes((r.total_rx||0)+(r.total_tx||0));
+
+    const linkIcon = r.port1_link ? '🟢' : '🔴';
+    const ts = new Date().toLocaleTimeString('pt-BR',{hour12:false});
+    document.getElementById('fg-ts').textContent =
+      `${linkIcon} port1: ${r.port1_ip||'?'} | ↓${fmtBytes(r.port1_rx||0)} ↑${fmtBytes(r.port1_tx||0)} | ${ts}`;
+    document.getElementById('last-sync').textContent = `sync FG: ${ts}`;
+
+    addLog('[FortiGate]',
+      `port1 ${r.port1_ip} | ↓${fmtBytes(r.port1_rx||0)} ↑${fmtBytes(r.port1_tx||0)} | throughput: <span style="color:var(--ai);">${rateStr}</span>`,
+      'info');
+
+  } catch {
+    fgConnected=false;
+    document.getElementById('chip-proxy').className='be-chip down';
+    document.getElementById('fg-ts').textContent='proxy offline — inicie proxy_fortigate.py';
+    addLog('[API]','Proxy FortiGate offline — localhost:5000','warn');
+  }
+}
+function startFGPolling(){ fetchFG(); setInterval(fetchFG,15000); }
+
+// ══════════════════════════════════════════════════════════════
+// ZEEK / WAZUH SIMULATION
+// ══════════════════════════════════════════════════════════════
+let zeekInt=null;
+function updateZeek(o={}){
+  const c=o.conns??(340+Math.floor(Math.random()*80-40));
+  const d=o.dns??(Math.floor(Math.random()*120)+60);
+  const a=o.alerts??0; const h=o.hosts??(247+Math.floor(Math.random()*6-3));
+  document.getElementById('zk-conns').textContent=c;
+  document.getElementById('zk-dns').textContent=d;
+  document.getElementById('zk-ndralerts').textContent=a;
+  document.getElementById('zk-ndralerts').style.color=a>0?'var(--crit)':'var(--ok)';
+  document.getElementById('zk-hosts').textContent=h;
+}
+function hlProto(p){ document.querySelectorAll('#zk-proto span').forEach(el=>{ if(el.textContent===p){el.style.background='rgba(255,77,77,.1)';el.style.color='var(--crit)';el.style.borderColor='rgba(255,77,77,.3)';}else{el.style.background='var(--zk-bg)';el.style.color='var(--zk)';el.style.borderColor='rgba(6,200,216,.2)';} }); }
+function resetProto(){ document.querySelectorAll('#zk-proto span').forEach(el=>{ el.style.background='var(--zk-bg)';el.style.color='var(--zk)';el.style.borderColor='rgba(6,200,216,.2)'; }); }
+function updateWazuh(o={}){ if(o.alerts!==undefined) document.getElementById('wz-alerts').textContent=o.alerts; if(o.eps!==undefined) document.getElementById('wz-eps').textContent=o.eps; }
+function startZeek(){ updateZeek(); zeekInt=setInterval(()=>{ updateZeek(); document.getElementById('wz-eps').textContent=(Math.floor(Math.random()*40)+20); },8000); }
+
+// ══════════════════════════════════════════════════════════════
+// BUTTON LOCK
+// ══════════════════════════════════════════════════════════════
+let running=false;
+function lockBtns(){ running=true; ['btn1','btn2','btn3','btn4'].forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled=true; }); }
+
+// ══════════════════════════════════════════════════════════════
+// CENÁRIO 1: RANSOMWARE
+// ══════════════════════════════════════════════════════════════
+function runRansomware(){
+  if(running) return; lockBtns();
+  document.getElementById('actions').innerHTML='<div data-empty style="font-size:9px;color:var(--muted);text-align:center;padding:8px;font-family:\'IBM Plex Mono\',monospace;">Processando...</div>';
+
+  flowAlert('fn-fg','fa-1');
+  addLog('[FortiGate]','Tráfego anômalo detectado: WS-004 iniciando múltiplas conexões SMB internas','warn',0);
+  addLog('[Wazuh]','<span style="color:var(--crit);">ALERTA: mudanças em massa de extensão de arquivo — WS-004 (rule 87105)</span>','crit',800);
+  addLog('[Wazuh]','PowerShell suspeito: enumeração de rede ativa (net view, arp -a)','warn',1600);
+
+  setTimeout(()=>{ flowAlert('fn-wz','fa-3'); updateWazuh({alerts:1,eps:142}); },2000);
+  setTimeout(()=>{
+    document.getElementById('banner').style.display='block';
+    document.getElementById('b-title').textContent='INCIDENTE ATIVO — RANSOMWARE';
+    document.getElementById('b-sub').textContent='WS-004  |  Zona Usuários  |  Propagação detectada';
+    startTimer(); setHeader('INCIDENTE EM ANDAMENTO','crit');
+  },2500);
+
+  // IA: tenta real, cai para simulado
+  setTimeout(()=>{
+    flowAlert('fn-ai','fa-4');
+    addLog('[IA]','<span style="color:var(--ai);">Analisando batch Wazuh → build_prompt → Ollama...</span>','ai',0);
+    tryAI(
+      [
+        {rule:{id:'100200',level:14,description:'Ransomware: cifração em massa de arquivos',mitre:{id:'T1486'}},agent:{name:'WS-004'},data:{srcip:'10.0.1.50',files_changed:847,extension:'.locked'}},
+        {rule:{id:'92657',level:12,description:'PowerShell: enumeração de rede ativa',mitre:{id:'T1057'}},agent:{name:'WS-004'},data:{cmdline:'net view /all; arp -a'}}
+      ],
+      'dashboard-ransomware',
+      ()=>{
+        showAIResult('CRÍTICO',
+          'Ransomware confirmado em WS-004. Padrão LockBit 3.0 identificado — cifração em massa + enumeração de rede ativa.',
+          [{type:'Execução/Cifração',mitre:'T1486',confidence:'ALTA',desc:'Extensões .locked detectadas em 847 arquivos em 23s'}],
+          'Isolar WS-004 imediatamente via VLAN-Quarentena + bloquear tráfego E-W + revogar credenciais do usuário',
+          false
+        );
+        addLog('[IA]','[CRÍTICO] LockBit 3.0 · T1486 · confiança 94% — contenção urgente (SIMULADO)','warn',0);
+      }
+    );
+  },3500);
+
+  setTimeout(()=>{
+    setMode('CONTENÇÃO','🔴','Ransomware — isolamento imediato em curso',true);
+    runPlaybook('ransomware',()=>{ addAction('🎯','CRISP: playbook ransomware concluído — 0 serviços críticos afetados','var(--ok)'); });
+    setRisk([{name:'WS-004',risk:96,impact:15,action:'QUARENTENA'},{name:'Zona Usuários',risk:52,impact:22,action:'ISOLAR'}]);
+  },6500);
+
+  setTimeout(()=>{ setNode('n-users','crit','WS-004 comprometido'); },7000);
+  addLog('[Wazuh]','Active response acionado: agente Wazuh isolando WS-004','info',7500);
+  addLog('[FortiGate]','<span style="color:var(--ok);">IOC bloqueado: C2 185.234.xx.xx + tráfego E-W Usuários→Core fechado</span>','ok',9500);
+  addLog('[Wazuh]','<span style="color:var(--ok);">✓ WS-004 isolado — 28s após detecção inicial</span>','ok',11000);
+  setTimeout(()=>{ setNode('n-users','warn','Zona isolada — monitorando'); addAction('🔒','FortiNAC: WS-004 → VLAN-Quarentena (RADIUS CoA)','var(--fg)',0); addAction('🛡️','FortiGate: E-W Usuários→Core bloqueado','var(--crit)',200); },11500);
+  addLog('[CRISP]','<span style="color:var(--ok);font-weight:600;">✓ AMEAÇA CONTIDA — playbook executado — 0 serviços afetados</span>','ok',14000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// CENÁRIO 2: MOVIMENTO LATERAL
+// ══════════════════════════════════════════════════════════════
+function runLateral(){
+  if(running) return; lockBtns();
+  document.getElementById('actions').innerHTML='<div data-empty style="font-size:9px;color:var(--muted);text-align:center;padding:8px;font-family:\'IBM Plex Mono\',monospace;">Processando...</div>';
+
+  flowAlert('fn-zk','fa-2');
+  addLog('[Zeek]','conn.log: OT-SENSOR-012 → 10.0.1.100 | porta 445 | 14 novas conexões/60s','zeek',0);
+  addLog('[Zeek]','Anomalia: OT→Core nunca observado no baseline histórico (30 dias)','zeek',1000);
+  addLog('[Wazuh]','<span style="color:var(--warn);">Correlação: tráfego SMB incomum — T1021.002 detectado via rule 100412</span>','warn',2000);
+  setTimeout(()=>{ flowAlert('fn-wz','fa-3'); updateZeek({conns:480,dns:88,alerts:1,hosts:248}); updateWazuh({alerts:1,eps:89}); },2500);
+
+  setTimeout(()=>{
+    document.getElementById('banner').style.display='block';
+    document.getElementById('b-title').textContent='INCIDENTE — MOVIMENTO LATERAL';
+    document.getElementById('b-sub').textContent='OT-SENSOR-012 | Zona OT→Core | SMB pivot attempt';
+    startTimer(); setHeader('MOVIMENTO LATERAL DETECTADO','warn');
+  },3000);
+
+  setTimeout(()=>{
+    flowAlert('fn-ai','fa-4');
+    addLog('[IA]','<span style="color:var(--ai);">Analisando conn.log Zeek → Wazuh → Ollama...</span>','ai',0);
+    tryAI(
+      [
+        {rule:{id:'100412',level:12,description:'Zeek: tráfego SMB OT→Core anômalo',mitre:{id:'T1021.002'}},agent:{name:'OT-SENSOR-012'},data:{srcip:'10.10.0.12',dstip:'10.0.1.100',dstport:'445',proto:'tcp',connections:14}},
+        {rule:{id:'100412',level:12,description:'Zeek: SMB pivot — padrão nunca observado no baseline',mitre:{id:'T1021.002'}},agent:{name:'OT-SENSOR-012'},data:{srcip:'10.10.0.12',proto:'smb',timeframe:'60s'}}
+      ],
+      'dashboard-lateral',
+      ()=>{
+        showAIResult('ALTO',
+          'Movimento lateral confirmado: OT-SENSOR-012 tentando pivot via SMB para Core. Padrão nunca visto no baseline.',
+          [{type:'Movimento Lateral',mitre:'T1021.002',confidence:'ALTA',desc:'14 tentativas SMB em 60s — possível worm ou operador humano'}],
+          'Bloquear ACL OT→Core imediatamente + isolar OT-SENSOR-012 + exportar conn.log para forense',
+          false
+        );
+        addLog('[IA]','[ALTO] T1021.002 · SMB pivot · confiança 89% (SIMULADO)','warn',0);
+      }
+    );
+  },4000);
+
+  setTimeout(()=>{
+    setMode('ENDURECIMENTO','🟡','Isolar OT — proteger segmento Core',true);
+    runPlaybook('lateral',()=>{ addAction('🎯','CRISP: movimento lateral contido — Core protegido','var(--ok)'); });
+    setRisk([{name:'OT-SENSOR-012',risk:78,impact:58,action:'ISOLAR'},{name:'Core Infra',risk:32,impact:90,action:'ENDURECER'}]);
+  },6000);
+
+  addLog('[FortiGate]','ACL aplicada: OT-SENSOR-012 SMB → Core — BLOQUEADO','ok',7000);
+  setTimeout(()=>{ setNode('n-ot','warn','OT-SENSOR-012 atividade suspeita'); setNode('n-core','warn','Endurecido — monitorando'); addAction('🛡️','FortiGate: ACL OT→Core aplicada','var(--crit)',0); addAction('🔵','Zeek: conn.log exportado ao FortiAnalyzer','var(--zk)',200); },7500);
+  addLog('[CRISP]','<span style="color:var(--ok);">✓ Pivot bloqueado — Core seguro</span>','ok',11000);
+  setTimeout(()=>{ setNode('n-ot','quar','Em quarentena'); },11500);
+}
+
+// ══════════════════════════════════════════════════════════════
+// CENÁRIO 3: DNS TUNNELING (Zeek)
+// ══════════════════════════════════════════════════════════════
+function runZeekTunnel(){
+  if(running) return; lockBtns();
+  document.getElementById('actions').innerHTML='<div data-empty style="font-size:9px;color:var(--muted);text-align:center;padding:8px;font-family:\'IBM Plex Mono\',monospace;">Processando...</div>';
+
+  flowAlert('fn-zk','fa-2');
+  addLog('[Zeek]','Baseline DNS: 72 consultas/min → Detectado: <span style="color:var(--crit);">1.847/min</span> — WS-021','zeek',0);
+  addLog('[Zeek]','Payload: subdomínios alta entropia (base64-like) — padrão de tunelamento','zeek',1200);
+  addLog('[Zeek]','conn.log: WS-021 → 8.8.8.8 | duração: 847s | 2,4MB via porta 53','zeek',2200);
+  setTimeout(()=>{ updateZeek({conns:521,dns:1847,alerts:1,hosts:248}); hlProto('DNS'); flowAlert('fn-wz','fa-3'); updateWazuh({alerts:1,eps:201}); },2500);
+  addLog('[Wazuh]','<span style="color:var(--warn);">Correlacionando: anomalia Zeek NDR em WS-021 — rule 100887</span>','warn',3500);
+
+  setTimeout(()=>{
+    document.getElementById('banner').style.display='block';
+    document.getElementById('b-title').textContent='INCIDENTE — TUNELAMENTO DNS DETECTADO';
+    document.getElementById('b-sub').textContent='WS-021 | Exfiltração via DNS | Zeek NDR';
+    startTimer(); setHeader('TUNELAMENTO DNS — ZEEK NDR','warn');
+  },4000);
+
+  setTimeout(()=>{
+    flowAlert('fn-ai','fa-4');
+    addLog('[IA]','<span style="color:var(--ai);">Analisando dns.log Zeek → Ollama...</span>','ai',0);
+    tryAI(
+      [
+        {rule:{id:'100887',level:12,description:'Zeek: volume DNS anômalo 1847/min (baseline 72/min)',mitre:{id:'T1071.004'}},agent:{name:'WS-021'},data:{srcip:'10.0.1.21',proto:'dns',queries_per_min:1847,baseline:72,payload:'base64-encoded subdomains'}},
+        {rule:{id:'100887',level:12,description:'Zeek: conn.log 2.4MB via porta 53 em 847s',mitre:{id:'T1071.004'}},agent:{name:'WS-021'},data:{dstip:'8.8.8.8',dstport:53,bytes:'2.4MB',duration:'847s'}}
+      ],
+      'dashboard-dns-tunnel',
+      ()=>{
+        showAIResult('ALTO',
+          'DNS Tunneling confirmado em WS-021. Volume 25x acima do baseline + subdomínios codificados. Possível exfiltração de dados sensíveis.',
+          [{type:'Exfiltração via DNS',mitre:'T1071.004',confidence:'ALTA',desc:'2,4MB transmitidos via porta 53 para resolver não autorizado'}],
+          'Bloquear DNS externo para WS-021 + redirecionar para DNS interno + isolar host para forense',
+          false
+        );
+        addLog('[IA]','[ALTO] T1071.004 · DNS Tunneling · confiança 91% (SIMULADO)','warn',0);
+      }
+    );
+  },5000);
+
+  setTimeout(()=>{
+    setMode('BLOQUEAR-EXFIL','🔵','Bloquear exfiltração DNS — isolar host',true);
+    runPlaybook('dns_tunnel',()=>{ addAction('🎯','CRISP: exfiltração DNS contida. Zeek + FortiGate.','var(--ok)'); });
+    setRisk([{name:'WS-021',risk:73,impact:42,action:'BLOQUEAR DNS'},{name:'Zona Usuários',risk:38,impact:60,action:'MONITORAR'}]);
+  },7500);
+
+  addLog('[FortiGate]','Bloqueando: WS-021 → resolvers DNS externos. Redirecionando para DNS interno.','warn',8500);
+  setTimeout(()=>{ setNode('n-users','warn','WS-021 DNS bloqueado'); addAction('🛡️','FortiGate: DNS externo bloqueado para WS-021','var(--crit)',0); },9000);
+  addLog('[Zeek]','<span style="color:var(--ok);">✓ DNS normalizado — 68 consultas/min (baseline restaurado)</span>','ok',11000);
+  setTimeout(()=>{ updateZeek({conns:355,dns:68,alerts:0,hosts:247}); resetProto(); setNode('n-users','quar','WS-021 em análise forense'); addAction('🔒','FortiNAC: WS-021 → VLAN-Quarentena','var(--fg)',0); addAction('📋','Zeek dns.log+conn.log → FortiAnalyzer','var(--warn)',200); },11500);
+  addLog('[CRISP]','<span style="color:var(--ok);font-weight:600;">✓ Exfiltração bloqueada — WS-021 isolado para forense</span>','ok',14000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// CENÁRIO 4: FALCON EDR
+// ══════════════════════════════════════════════════════════════
+function runFalcon(){
+  if(running) return; lockBtns();
+  document.getElementById('actions').innerHTML='<div data-empty style="font-size:9px;color:var(--muted);text-align:center;padding:8px;font-family:\'IBM Plex Mono\',monospace;">Processando...</div>';
+
+  flowAlert('fn-cs',null);
+  addLog('[Falcon]','OAuth2 token obtido — stream ativo: /sensors/entities/datafeed/v2','falcon',0);
+  addLog('[Falcon]','DetectionSummaryEvent: WORKSTATION-04 | Severity: 4 | Tactic: Execution','falcon',1200);
+  addLog('[Falcon]','<span style="color:var(--cs);">Process: powershell.exe | CmdLine: -enc JABjAD0ATgBlAHcALQBP... (base64 ofuscado)</span>','falcon',2200);
+  addLog('[Falcon]','SHA256: abc123def456 | User: DOMINIO\\analista | Severity≥4 → flush imediato','falcon',3000);
+
+  setTimeout(()=>{ flowAlert('fn-wz','fa-3'); addLog('[Wazuh]','Evento Falcon ingerido — correlacionando com logs de host WORKSTATION-04','wazuh',0); updateWazuh({alerts:1,eps:67}); document.getElementById('cs-det').textContent='1'; document.getElementById('cs-sev').textContent='ALTO'; document.getElementById('cs-sev').style.color='var(--warn)'; },3800);
+
+  setTimeout(()=>{
+    document.getElementById('banner').style.display='block';
+    document.getElementById('b-title').textContent='INCIDENTE — FALCON EDR · EXECUÇÃO SUSPEITA';
+    document.getElementById('b-sub').textContent='WORKSTATION-04 | PowerShell ofuscado | Severity 4';
+    startTimer(); setHeader('FALCON EDR — EXECUÇÃO DETECTADA','warn');
+  },4200);
+
+  setTimeout(()=>{
+    flowAlert('fn-ai','fa-4');
+    addLog('[IA]','<span style="color:var(--ai);">analyze_falcon_batch → build_falcon_prompt → Ollama...</span>','ai',0);
+    tryAI(
+      [
+        {rule:{id:'100500',level:15,description:'Falcon: PowerShell base64 ofuscado detectado',mitre:{id:'T1059.001'}},agent:{name:'WORKSTATION-04'},data:{process:'powershell.exe',cmdline:'-enc JABjAD0ATgBlAHcALQBP',sha256:'abc123def456',user:'DOMINIO\\analista'},_source:'crowdstrike_falcon',metadata:{eventType:'DetectionSummaryEvent'},event:{Severity:4,Tactic:'Execution',Technique:'PowerShell',ComputerName:'WORKSTATION-04',FileName:'powershell.exe'}}
+      ],
+      'dashboard-falcon',
+      ()=>{
+        showAIResult('ALTO',
+          'PowerShell com argumento base64 ofuscado detectado — WORKSTATION-04. Padrão consistente com stager de malware ou C2 callback.',
+          [{type:'Execução Ofuscada',mitre:'T1059.001',confidence:'ALTA',desc:'powershell.exe -enc base64 — técnica clássica de evasão de AV'}],
+          'Isolar WORKSTATION-04 + bloquear hash abc123def456 em todas as políticas + revisar processo pai',
+          false
+        );
+        addLog('[IA]','[ALTO] T1059.001 · PowerShell ofuscado · confiança 93% (SIMULADO)','warn',0);
+      }
+    );
+    document.getElementById('cs-ts').textContent='análise IA em progresso → /analyses endpoint';
+    document.getElementById('cs-blocked').textContent='1';
+  },5200);
+
+  setTimeout(()=>{
+    setMode('EDR-CONTENÇÃO','🦅','Falcon detectou execução — contenção automatizada',true);
+    runPlaybook('falcon_edr',()=>{ addAction('🎯','CRISP: Falcon + IA + SOAR — contenção automatizada concluída','var(--ok)'); });
+    setRisk([{name:'WORKSTATION-04',risk:84,impact:57,action:'ISOLAR'},{name:'Zona Usuários',risk:42,impact:47,action:'MONITORAR'}]);
+  },8500);
+
+  addLog('[Wazuh]','Active response: agente Wazuh acionado em WORKSTATION-04','info',10000);
+  addLog('[FortiGate]','Hash abc123def456 bloqueado em todas as políticas de inspeção','ok',11000);
+  setTimeout(()=>{ setNode('n-users','quar','WORKSTATION-04 em quarentena'); addAction('🦅','Falcon EDR: DetectionSummaryEvent Sev4 → flush imediato','var(--cs)',0); addAction('🧠','IA: T1059.001 · ALTO · isolamento recomendado','var(--ai)',200); addAction('🔒','FortiNAC: WORKSTATION-04 → VLAN-Quarentena','var(--fg)',400); addAction('🛡️','FortiGate: hash malicioso bloqueado nas políticas','var(--crit)',600); },12000);
+  addLog('[CRISP]','<span style="color:var(--ok);font-weight:600;">✓ Detecção Falcon contida — IA + SOAR integrados ao pipeline</span>','ok',15000);
+}
+
+// ══════════════════════════════════════════════════════════════
+// RESET
+// ══════════════════════════════════════════════════════════════
+function doReset(){
+  running=false; stopTimer(); clearTimeout(pbTimer);
+  ['btn1','btn2','btn3','btn4'].forEach(id=>{ const el=document.getElementById(id); if(el) el.disabled=false; });
+  document.getElementById('banner').style.display='none';
+  document.getElementById('b-timer').textContent='00:00';
+  setHeader('TODOS OS SISTEMAS OPERACIONAIS','ok');
+  setMode('INATIVO','🛡️','Aguardando eventos do pipeline',false);
+  ['n-core','n-users','n-dmz','n-ot','n-vpn','n-cloud','n-vendor','n-mgmt'].forEach(id=>setNode(id,'ok',''));
+  document.getElementById('risk-list').innerHTML='<div style="font-size:9px;color:var(--muted);text-align:center;padding:8px;font-family:\'IBM Plex Mono\',monospace;">Nenhum ativo em análise</div>';
+  document.getElementById('actions').innerHTML='<div data-empty style="font-size:9px;color:var(--muted);text-align:center;padding:8px;font-family:\'IBM Plex Mono\',monospace;">Aguardando...</div>';
+  document.getElementById('ai-panel').innerHTML=`<div class="ai-panel-title">🧠 MODELO — AGUARDANDO</div><div class="ai-result" style="color:var(--muted);font-size:9px;">Nenhum evento enviado ao modelo ainda.<br>Pipeline: Wazuh → analyzer.py → Ollama → CRISP</div>`;
+  document.getElementById('pb-name').textContent='Nenhum playbook ativo';
+  document.getElementById('pb-steps').innerHTML='<div style="font-size:9px;color:var(--muted);font-family:\'IBM Plex Mono\',monospace;">Aguardando incidente...</div>';
+  document.getElementById('cs-det').textContent='0'; document.getElementById('cs-blocked').textContent='0'; document.getElementById('cs-sev').textContent='—'; document.getElementById('cs-sev').style.color='var(--muted)'; document.getElementById('cs-ts').textContent='stream: /sensors/entities/datafeed/v2';
+  resetProto(); updateZeek(); updateWazuh({alerts:0,eps:0});
+  evCount=0;
+  const t=new Date().toLocaleTimeString('pt-BR',{hour12:false});
+  document.getElementById('feed').innerHTML=`
+    <div class="ev info"><span class="ev-src" style="color:var(--fg);">[FortiGate]</span><span class="ev-time">${t}</span><span class="ev-msg">Sistema iniciado. Pipeline ativo: FortiGate → Zeek → Wazuh → IA → CRISP</span></div>
+    <div class="ev ok"><span class="ev-src" style="color:var(--wz);">[Wazuh]</span><span class="ev-time">${t}</span><span class="ev-msg">SIEM ativo — 247 agentes conectados — 3.2k regras carregadas</span></div>
+    <div class="ev zeek"><span class="ev-src" style="color:var(--zk);">[Zeek]</span><span class="ev-time">${t}</span><span class="ev-msg">NDR ativo — baseline carregado — monitorando tráfego interno</span></div>
+    <div class="ev falcon"><span class="ev-src" style="color:var(--cs);">[Falcon]</span><span class="ev-time">${t}</span><span class="ev-msg">Event Stream OAuth2 — aguardando DetectionSummaryEvent</span></div>
+    <div class="ev ai"><span class="ev-src" style="color:var(--ai);">[IA]</span><span class="ev-time">${t}</span><span class="ev-msg">Modelo carregado — pipeline analyzer.py pronto — Ollama: localhost:11434</span></div>
+  `;
+  document.getElementById('ev-count').textContent='5 eventos'; evCount=5;
+}
+
+// ── INIT ──
+doReset();
+checkBackends();
+startFGPolling();
+startZeek();
+// Polling de análises históricas a cada 30s
+setInterval(pollAnalyses, 30000);
+// Re-verificar backends a cada 60s
+setInterval(checkBackends, 60000);
+</script>
+</body>
+</html>

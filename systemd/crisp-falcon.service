@@ -1,0 +1,14 @@
+[Unit]
+Description=CRISP CrowdStrike Falcon Consumer
+After=crisp-ai.service
+
+[Service]
+User=ubuntu
+WorkingDirectory=/opt/crisp-soc/soc-ai
+EnvironmentFile=/opt/crisp-soc/soc-ai/.env
+ExecStart=/opt/crisp-soc/soc-ai/venv/bin/python falcon_consumer.py
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

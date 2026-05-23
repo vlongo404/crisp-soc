@@ -1,0 +1,61 @@
+<group name="crisp,custom,">
+
+  <!-- Ransomware: mudança em massa de extensões -->
+  <rule id="100200" level="14">
+    <if_sid>554</if_sid>
+    <field name="file.path" type="pcre2">\.locked$|\.enc$|\.crypt$|\.locky$|\.wannacry$</field>
+    <description>CRISP: Possivel ransomware — extensao suspeita detectada</description>
+    <mitre><id>T1486</id></mitre>
+    <group>ransomware,</group>
+  </rule>
+
+  <!-- Ransomware: PowerShell suspeito (enumeracao de rede) -->
+  <rule id="100201" level="12">
+    <if_sid>92657</if_sid>
+    <field name="win.eventdata.commandLine" type="pcre2">net view|arp -a|nmap|vssadmin</field>
+    <description>CRISP: PowerShell suspeito — enumeracao de rede ou shadow copy</description>
+    <mitre><id>T1486</id></mitre>
+    <group>ransomware,</group>
+  </rule>
+
+  <!-- Movimento lateral via SMB -->
+  <rule id="100412" level="12">
+    <decoded_as>json</decoded_as>
+    <field name="proto">tcp</field>
+    <field name="dest_port">445</field>
+    <description>CRISP: Zeek — trafego SMB interno anomalo</description>
+    <mitre><id>T1021.002</id></mitre>
+    <group>lateral_movement,</group>
+  </rule>
+
+  <!-- DNS Tunneling via Zeek -->
+  <rule id="100887" level="12">
+    <decoded_as>json</decoded_as>
+    <field name="source">zeek</field>
+    <field name="proto">dns</field>
+    <regex>query_count > 500</regex>
+    <description>CRISP: Zeek — volume DNS anomalo (possivel tunelamento)</description>
+    <mitre><id>T1071.004</id></mitre>
+    <group>dns_tunneling,exfiltration,</group>
+  </rule>
+
+  <!-- CrowdStrike Falcon: detecao critica -->
+  <rule id="100500" level="15">
+    <decoded_as>json</decoded_as>
+    <field name="_source">crowdstrike_falcon</field>
+    <field name="metadata.eventType">DetectionSummaryEvent</field>
+    <description>CRISP: CrowdStrike Falcon — deteccao critica de endpoint</description>
+    <group>edr,crowdstrike,</group>
+  </rule>
+
+  <!-- FortiGate: conexoes suspeitas de borda -->
+  <rule id="100600" level="10">
+    <decoded_as>json</decoded_as>
+    <field name="source">fortigate</field>
+    <field name="action">deny</field>
+    <description>CRISP: FortiGate — conexao bloqueada na borda</description>
+    <mitre><id>T1190</id></mitre>
+    <group>firewall,</group>
+  </rule>
+
+</group>

@@ -1,0 +1,55 @@
+name: Resposta a Movimento Lateral
+version: "1.0"
+trigger:
+  wazuh_rule_ids: [100412]
+  zeek_condition: "smb_connections > 10/min from OT segment"
+  mitre_technique: T1021.002
+
+steps:
+  - id: detect
+    name: Zeek detecta conn.log anômalo (SMB)
+    action: log
+    description: Zeek detectou tráfego SMB interno fora do baseline (rule 100412)
+    timeout: 30s
+
+  - id: wazuh_correlate
+    name: Wazuh correlaciona com logs de host
+    action: query_wazuh
+    filter:
+      agent: "{{ host }}"
+      timeframe: "5m"
+    timeout: 30s
+
+  - id: ai_analysis
+    name: IA — T1021.002 pivot confirmado
+    action: http_post
+    url: http://localhost:8000/analyze
+    body: "{{ wazuh_events }}"
+    timeout: 120s
+
+  - id: acl
+    name: FortiGate aplica ACL OT→Core
+    action: http_post
+    url: "{{ fortigate_api }}/api/v2/cmdb/firewall/policy"
+    body:
+      action: deny
+      srcintf: OT
+      dstintf: Core
+      srcaddr: "{{ host_ip }}"
+      service: SMB
+    condition: "ai_result.priority in ['CRÍTICO', 'ALTO']"
+    timeout: 60s
+
+  - id: isolate
+    name: FortiNAC isola segmento OT
+    action: radius_coa
+    nas_ip: "{{ switch_ip }}"
+    vlan: quarantine
+    timeout: 60s
+
+  - id: report
+    name: Exportar conn.log ao FortiAnalyzer
+    action: copy_file
+    src: /opt/zeek/logs/current/conn.log
+    dst: /opt/crisp-soc/evidence/{{ incident_id }}_conn.log
+    timeout: 30s

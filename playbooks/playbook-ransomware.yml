@@ -1,0 +1,53 @@
+name: Resposta a Ransomware
+version: "1.0"
+trigger:
+  wazuh_rule_ids: [100200, 87105]
+  min_level: 12
+  mitre_technique: T1486
+
+steps:
+  - id: detect
+    name: Detecção via Wazuh
+    action: log
+    description: Wazuh detectou extensões cifradas (rule 100200)
+    timeout: 30s
+
+  - id: alert
+    name: Correlacionar e escalar
+    action: notify
+    channel: [siem, dashboard]
+    severity: CRITICAL
+    timeout: 10s
+
+  - id: ai_analysis
+    name: Análise IA
+    action: http_post
+    url: http://localhost:8000/analyze
+    body: "{{ wazuh_events }}"
+    timeout: 120s
+
+  - id: isolate
+    name: Isolar host via FortiNAC
+    action: http_post
+    url: "{{ fortigate_api }}/api/v2/cmdb/firewall/address"
+    body:
+      name: "{{ host }}"
+      subnet: "{{ host_ip }}/32"
+    condition: "ai_result.priority in ['CRÍTICO', 'ALTO']"
+    timeout: 60s
+
+  - id: block_c2
+    name: Bloquear C2 no FortiGate
+    action: http_post
+    url: "{{ fortigate_api }}/api/v2/cmdb/firewall/policy"
+    body:
+      action: deny
+      dstaddr: "{{ c2_iocs }}"
+    timeout: 60s
+
+  - id: report
+    name: Salvar análise + gerar relatório
+    action: db_insert
+    table: analyses
+    data: "{{ ai_result }}"
+    timeout: 10s
