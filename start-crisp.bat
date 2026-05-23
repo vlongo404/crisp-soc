@@ -34,7 +34,7 @@ echo       Postgres + Ollama: OK
 echo.
 
 :: ── 4. Abrir terminais do stack ───────────────────────────────
-echo [4/4] Abrindo terminais AI Pipeline e Proxy FortiGate...
+echo [4/4] Abrindo terminais AI Pipeline, Proxy FortiGate e Wazuh Consumer...
 echo.
 
 :: AI Pipeline
@@ -45,6 +45,12 @@ timeout /t 2 /nobreak >nul
 
 :: Proxy FortiGate
 start "CRISP — FortiGate Proxy" cmd /k "cd /d D:\marco\crisp-soc\proxy && echo Iniciando Proxy FortiGate... && python proxy_fortigate.py"
+
+:: Aguarda 2s e abre Wazuh Consumer
+timeout /t 2 /nobreak >nul
+
+:: Wazuh Agent Consumer
+start "CRISP — Wazuh Consumer" cmd /k "cd /d D:\marco\crisp-soc\soc-ai && echo Iniciando Wazuh Agent Consumer... && python wazuh_consumer.py"
 
 :: ── 5. Abrir Dashboard ────────────────────────────────────────
 timeout /t 3 /nobreak >nul
@@ -57,10 +63,11 @@ echo  ════════════════════════�
 echo  Stack CRISP iniciado com sucesso!
 echo.
 echo  Servicos rodando:
-echo    - Wazuh:   https://localhost (WSL2)
-echo    - AI API:  http://localhost:8000
-echo    - FG Proxy:http://localhost:5000
-echo    - Ollama:  http://localhost:11434
+echo    - Wazuh:        https://localhost (WSL2)
+echo    - AI API:       http://localhost:8000
+echo    - FG Proxy:     http://localhost:5000
+echo    - Ollama:       http://localhost:11434
+echo    - Wazuh Consumer: polling alertas level^>=10
 echo.
 echo  ATENCAO: Se o IP do FortiGate mudou, edite:
 echo    D:\marco\crisp-soc\proxy\.env
