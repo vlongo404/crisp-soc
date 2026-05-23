@@ -325,7 +325,7 @@ header{
   <div class="flow-arr" id="fa-4">──▶</div>
   <div class="flow-node active-fg" id="fn-dash" style="color:var(--text);border-color:var(--b2);background:var(--s3);">📊 CRISP</div>
   <div class="flow-arr" style="transform:scaleX(-1);color:var(--muted);">──▶</div>
-  <div class="flow-node active-cs" id="fn-cs">🦅 FALCON EDR</div>
+  <div class="flow-node active-cs" id="fn-cs">🛡️ WAZUH EDR</div>
 </div>
 
 <!-- MAIN LAYOUT -->
@@ -389,19 +389,19 @@ header{
         </div>
       </div>
 
-      <!-- Falcon -->
+      <!-- Wazuh Agent EDR -->
       <div class="tool-card" id="wp-falcon">
         <div class="tc-top">
-          <span class="tc-name" style="color:var(--cs);">🦅 CrowdStrike Falcon</span>
-          <span class="tc-badge" style="color:var(--cs);border-color:rgba(255,107,53,.3);background:var(--cs-bg);">STREAM</span>
+          <span class="tc-name" style="color:var(--cs);">🛡️ Wazuh Agent EDR</span>
+          <span class="tc-badge" style="color:var(--cs);border-color:rgba(255,107,53,.3);background:var(--cs-bg);">ATIVO</span>
         </div>
         <div class="tc-grid">
           <div class="tc-kpi"><div class="tc-kpi-lbl">Detecções</div><div class="tc-kpi-val" style="color:var(--cs);" id="cs-det">0</div></div>
-          <div class="tc-kpi"><div class="tc-kpi-lbl">Hosts Prot.</div><div class="tc-kpi-val" style="color:var(--ok);" id="cs-hosts">247</div></div>
+          <div class="tc-kpi"><div class="tc-kpi-lbl">Agentes</div><div class="tc-kpi-val" style="color:var(--ok);" id="cs-hosts">247</div></div>
           <div class="tc-kpi"><div class="tc-kpi-lbl">Bloqueados</div><div class="tc-kpi-val" style="color:var(--ok);" id="cs-blocked">0</div></div>
           <div class="tc-kpi"><div class="tc-kpi-lbl">Severidade</div><div class="tc-kpi-val" style="color:var(--muted);" id="cs-sev">—</div></div>
         </div>
-        <div style="font-size:7px;color:var(--muted);margin-top:5px;" id="cs-ts">stream: /sensors/entities/datafeed/v2</div>
+        <div style="font-size:7px;color:var(--muted);margin-top:5px;" id="cs-ts">consumer: wazuh_consumer.py | poll: 30s</div>
       </div>
 
     </div>
@@ -499,7 +499,7 @@ header{
   <button class="dbtn dbtn-r" id="btn1" onclick="runRansomware()">● Ransomware</button>
   <button class="dbtn dbtn-y" id="btn2" onclick="runLateral()">● Mov. Lateral</button>
   <button class="dbtn dbtn-c" id="btn3" onclick="runZeekTunnel()">● DNS Tunneling</button>
-  <button class="dbtn dbtn-o" id="btn4" onclick="runFalcon()">🦅 Falcon EDR</button>
+  <button class="dbtn dbtn-o" id="btn4" onclick="runWazuhEDR()">🛡️ Wazuh EDR</button>
   <div class="sv"></div>
   <button class="dbtn dbtn-g" onclick="fetchFG()">↺ API FortiGate</button>
   <button class="dbtn dbtn-ghost" onclick="doReset()" style="margin-left:auto;">Reiniciar</button>
@@ -535,7 +535,7 @@ const WIDGETS = [
   { id:'wp-netmap',   name:'Mapa de Rede',          icon:'🌐', on:true },
   { id:'wp-wazuh',    name:'Wazuh SIEM',            icon:'🛡', on:true },
   { id:'wp-zeek',     name:'Zeek/Suricata',         icon:'🔵', on:true },
-  { id:'wp-falcon',   name:'CrowdStrike Falcon',    icon:'🦅', on:true },
+  { id:'wp-falcon',   name:'Wazuh Agent EDR',       icon:'🛡️', on:true },
   { id:'wp-ai',       name:'Análise IA',            icon:'🧠', on:true },
   { id:'wp-playbook', name:'Playbook YAML',         icon:'📜', on:true },
   { id:'wp-risk',     name:'Score de Risco',        icon:'📈', on:true },
@@ -574,7 +574,7 @@ function stopTimer(){ clearInterval(timerInt); timerInt=null; }
 let evCount=0;
 const SRCCOLOR={
   '[FortiGate]':'var(--fg)','[Wazuh]':'var(--wz)','[Zeek]':'var(--zk)',
-  '[Suricata]':'var(--zk)','[Falcon]':'var(--cs)','[IA]':'var(--ai)',
+  '[Suricata]':'var(--zk)','[Wazuh Agent]':'var(--cs)','[IA]':'var(--ai)',
   '[CRISP]':'var(--crit)','[API]':'var(--fg)','[SOAR]':'var(--warn)',
 };
 function addLog(src,msg,cls='info',delay=0){
@@ -669,12 +669,12 @@ const PLAYBOOKS = {
     ]
   },
   falcon_edr: {
-    name: 'playbook-falcon-edr.yml',
+    name: 'playbook-wazuh-edr.yml',
     steps: [
-      { id:'stream',  label:'Falcon: DetectionSummaryEvent (sev≥4)',    icon:'🦅' },
-      { id:'flush',   label:'Falcon: flush imediato → analyzer.py',     icon:'⚡' },
-      { id:'ai',      label:'IA: build_falcon_prompt → Ollama',         icon:'🧠' },
-      { id:'soar',    label:'SOAR: playbook Falcon-Detection-Response',  icon:'⚙️' },
+      { id:'stream',  label:'Wazuh Agent: alerta level≥10 detectado',   icon:'🛡️' },
+      { id:'flush',   label:'Consumer: poll 30s → wazuh_consumer.py',   icon:'⚡' },
+      { id:'ai',      label:'IA: build_wazuh_prompt → Ollama',          icon:'🧠' },
+      { id:'soar',    label:'SOAR: playbook Wazuh-EDR-Response',        icon:'⚙️' },
       { id:'isolate', label:'FortiNAC: endpoint → VLAN-Quarentena',     icon:'🔒' },
       { id:'report',  label:'CRISP: save_analysis() → Postgres',        icon:'📋' },
     ]
@@ -1068,38 +1068,38 @@ function runZeekTunnel(){
 }
 
 // ══════════════════════════════════════════════════════════════
-// CENÁRIO 4: FALCON EDR
+// CENÁRIO 4: WAZUH AGENT EDR
 // ══════════════════════════════════════════════════════════════
-function runFalcon(){
+function runWazuhEDR(){
   if(running) return; lockBtns();
   document.getElementById('actions').innerHTML='<div data-empty style="font-size:9px;color:var(--muted);text-align:center;padding:8px;font-family:\'IBM Plex Mono\',monospace;">Processando...</div>';
 
   flowAlert('fn-cs',null);
-  addLog('[Falcon]','OAuth2 token obtido — stream ativo: /sensors/entities/datafeed/v2','falcon',0);
-  addLog('[Falcon]','DetectionSummaryEvent: WORKSTATION-04 | Severity: 4 | Tactic: Execution','falcon',1200);
-  addLog('[Falcon]','<span style="color:var(--cs);">Process: powershell.exe | CmdLine: -enc JABjAD0ATgBlAHcALQBP... (base64 ofuscado)</span>','falcon',2200);
-  addLog('[Falcon]','SHA256: abc123def456 | User: DOMINIO\\analista | Severity≥4 → flush imediato','falcon',3000);
+  addLog('[Wazuh Agent]','Consumer ativo — poll 30s | level >= 10','info',0);
+  addLog('[Wazuh Agent]','Alerta level:15 | Rule:100300 | WORKSTATION-04 | PowerShell base64 ofuscado','info',1200);
+  addLog('[Wazuh Agent]','<span style="color:var(--cs);">Process: powershell.exe | CmdLine: -enc JABjAD0ATgBlAHcALQBP... (base64 ofuscado)</span>','info',2200);
+  addLog('[Wazuh Agent]','FIM: integridade de arquivo alterada | SHA256: abc123def456 | User: DOMINIO\\analista','info',3000);
 
-  setTimeout(()=>{ flowAlert('fn-wz','fa-3'); addLog('[Wazuh]','Evento Falcon ingerido — correlacionando com logs de host WORKSTATION-04','wazuh',0); updateWazuh({alerts:1,eps:67}); document.getElementById('cs-det').textContent='1'; document.getElementById('cs-sev').textContent='ALTO'; document.getElementById('cs-sev').style.color='var(--warn)'; },3800);
+  setTimeout(()=>{ flowAlert('fn-wz','fa-3'); addLog('[Wazuh]','Alerta Wazuh Agent correlacionado — regra 100300 ativa em WORKSTATION-04','wazuh',0); updateWazuh({alerts:1,eps:67}); document.getElementById('cs-det').textContent='1'; document.getElementById('cs-sev').textContent='ALTO'; document.getElementById('cs-sev').style.color='var(--warn)'; },3800);
 
   setTimeout(()=>{
     document.getElementById('banner').style.display='block';
-    document.getElementById('b-title').textContent='INCIDENTE — FALCON EDR · EXECUÇÃO SUSPEITA';
-    document.getElementById('b-sub').textContent='WORKSTATION-04 | PowerShell ofuscado | Severity 4';
-    startTimer(); setHeader('FALCON EDR — EXECUÇÃO DETECTADA','warn');
+    document.getElementById('b-title').textContent='INCIDENTE — WAZUH EDR · EXECUÇÃO SUSPEITA';
+    document.getElementById('b-sub').textContent='WORKSTATION-04 | PowerShell ofuscado | Level 15';
+    startTimer(); setHeader('WAZUH EDR — EXECUÇÃO DETECTADA','warn');
   },4200);
 
   setTimeout(()=>{
     flowAlert('fn-ai','fa-4');
-    addLog('[IA]','<span style="color:var(--ai);">analyze_falcon_batch → build_falcon_prompt → Ollama...</span>','ai',0);
+    addLog('[IA]','<span style="color:var(--ai);">wazuh_consumer → build_wazuh_prompt → Ollama...</span>','ai',0);
     tryAI(
       [
-        {rule:{id:'100500',level:15,description:'Falcon: PowerShell base64 ofuscado detectado',mitre:{id:'T1059.001'}},agent:{name:'WORKSTATION-04'},data:{process:'powershell.exe',cmdline:'-enc JABjAD0ATgBlAHcALQBP',sha256:'abc123def456',user:'DOMINIO\\analista'},_source:'crowdstrike_falcon',metadata:{eventType:'DetectionSummaryEvent'},event:{Severity:4,Tactic:'Execution',Technique:'PowerShell',ComputerName:'WORKSTATION-04',FileName:'powershell.exe'}}
+        {rule:{id:'100300',level:15,description:'Wazuh Agent: PowerShell base64 ofuscado detectado',mitre:{id:'T1059.001',technique:'PowerShell'}},agent:{name:'WORKSTATION-04'},data:{process:'powershell.exe',cmdline:'-enc JABjAD0ATgBlAHcALQBP',sha256:'abc123def456',user:'DOMINIO\\analista'},_source:'wazuh-agent'}
       ],
-      'dashboard-falcon',
+      'dashboard-wazuh-edr',
       ()=>{
         showAIResult('ALTO',
-          'PowerShell com argumento base64 ofuscado detectado — WORKSTATION-04. Padrão consistente com stager de malware ou C2 callback.',
+          'PowerShell com argumento base64 ofuscado detectado em WORKSTATION-04. Padrão consistente com stager de malware ou C2 callback.',
           [{type:'Execução Ofuscada',mitre:'T1059.001',confidence:'ALTA',desc:'powershell.exe -enc base64 — técnica clássica de evasão de AV'}],
           'Isolar WORKSTATION-04 + bloquear hash abc123def456 em todas as políticas + revisar processo pai',
           false
@@ -1112,15 +1112,15 @@ function runFalcon(){
   },5200);
 
   setTimeout(()=>{
-    setMode('EDR-CONTENÇÃO','🦅','Falcon detectou execução — contenção automatizada',true);
-    runPlaybook('falcon_edr',()=>{ addAction('🎯','CRISP: Falcon + IA + SOAR — contenção automatizada concluída','var(--ok)'); });
+    setMode('EDR-CONTENÇÃO','🛡️','Wazuh Agent detectou execução — contenção automatizada',true);
+    runPlaybook('falcon_edr',()=>{ addAction('🎯','CRISP: Wazuh Agent + IA + SOAR — contenção automatizada concluída','var(--ok)'); });
     setRisk([{name:'WORKSTATION-04',risk:84,impact:57,action:'ISOLAR'},{name:'Zona Usuários',risk:42,impact:47,action:'MONITORAR'}]);
   },8500);
 
   addLog('[Wazuh]','Active response: agente Wazuh acionado em WORKSTATION-04','info',10000);
   addLog('[FortiGate]','Hash abc123def456 bloqueado em todas as políticas de inspeção','ok',11000);
-  setTimeout(()=>{ setNode('n-users','quar','WORKSTATION-04 em quarentena'); addAction('🦅','Falcon EDR: DetectionSummaryEvent Sev4 → flush imediato','var(--cs)',0); addAction('🧠','IA: T1059.001 · ALTO · isolamento recomendado','var(--ai)',200); addAction('🔒','FortiNAC: WORKSTATION-04 → VLAN-Quarentena','var(--fg)',400); addAction('🛡️','FortiGate: hash malicioso bloqueado nas políticas','var(--crit)',600); },12000);
-  addLog('[CRISP]','<span style="color:var(--ok);font-weight:600;">✓ Detecção Falcon contida — IA + SOAR integrados ao pipeline</span>','ok',15000);
+  setTimeout(()=>{ setNode('n-users','quar','WORKSTATION-04 em quarentena'); addAction('🛡️','Wazuh Agent EDR: level 15 → consumer flush imediato','var(--cs)',0); addAction('🧠','IA: T1059.001 · ALTO · isolamento recomendado','var(--ai)',200); addAction('🔒','FortiNAC: WORKSTATION-04 → VLAN-Quarentena','var(--fg)',400); addAction('🛡️','FortiGate: hash malicioso bloqueado nas políticas','var(--crit)',600); },12000);
+  addLog('[CRISP]','<span style="color:var(--ok);font-weight:600;">✓ Detecção Wazuh EDR contida — IA + SOAR integrados ao pipeline</span>','ok',15000);
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1139,7 +1139,7 @@ function doReset(){
   document.getElementById('ai-panel').innerHTML=`<div class="ai-panel-title">🧠 MODELO — AGUARDANDO</div><div class="ai-result" style="color:var(--muted);font-size:9px;">Nenhum evento enviado ao modelo ainda.<br>Pipeline: Wazuh → analyzer.py → Ollama → CRISP</div>`;
   document.getElementById('pb-name').textContent='Nenhum playbook ativo';
   document.getElementById('pb-steps').innerHTML='<div style="font-size:9px;color:var(--muted);font-family:\'IBM Plex Mono\',monospace;">Aguardando incidente...</div>';
-  document.getElementById('cs-det').textContent='0'; document.getElementById('cs-blocked').textContent='0'; document.getElementById('cs-sev').textContent='—'; document.getElementById('cs-sev').style.color='var(--muted)'; document.getElementById('cs-ts').textContent='stream: /sensors/entities/datafeed/v2';
+  document.getElementById('cs-det').textContent='0'; document.getElementById('cs-blocked').textContent='0'; document.getElementById('cs-sev').textContent='—'; document.getElementById('cs-sev').style.color='var(--muted)'; document.getElementById('cs-ts').textContent='consumer: wazuh_consumer.py | poll: 30s';
   resetProto(); updateZeek(); updateWazuh({alerts:0,eps:0});
   evCount=0;
   const t=new Date().toLocaleTimeString('pt-BR',{hour12:false});
@@ -1147,7 +1147,7 @@ function doReset(){
     <div class="ev info"><span class="ev-src" style="color:var(--fg);">[FortiGate]</span><span class="ev-time">${t}</span><span class="ev-msg">Sistema iniciado. Pipeline ativo: FortiGate → Zeek → Wazuh → IA → CRISP</span></div>
     <div class="ev ok"><span class="ev-src" style="color:var(--wz);">[Wazuh]</span><span class="ev-time">${t}</span><span class="ev-msg">SIEM ativo — 247 agentes conectados — 3.2k regras carregadas</span></div>
     <div class="ev zeek"><span class="ev-src" style="color:var(--zk);">[Zeek]</span><span class="ev-time">${t}</span><span class="ev-msg">NDR ativo — baseline carregado — monitorando tráfego interno</span></div>
-    <div class="ev falcon"><span class="ev-src" style="color:var(--cs);">[Falcon]</span><span class="ev-time">${t}</span><span class="ev-msg">Event Stream OAuth2 — aguardando DetectionSummaryEvent</span></div>
+    <div class="ev falcon"><span class="ev-src" style="color:var(--cs);">[Wazuh Agent]</span><span class="ev-time">${t}</span><span class="ev-msg">EDR ativo — wazuh_consumer.py — polling alertas level≥10 a cada 30s</span></div>
     <div class="ev ai"><span class="ev-src" style="color:var(--ai);">[IA]</span><span class="ev-time">${t}</span><span class="ev-msg">Modelo carregado — pipeline analyzer.py pronto — Ollama: localhost:11434</span></div>
   `;
   document.getElementById('ev-count').textContent='5 eventos'; evCount=5;
