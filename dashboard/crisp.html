@@ -77,15 +77,44 @@ header{
 #banner{
   display:none;padding:8px 20px;background:var(--crit-bg);
   border-bottom:1px solid rgba(255,77,77,.15);flex-shrink:0;
+  animation:slide-down .2s ease;transition:background .4s,border-color .4s;
+}
+#banner.resolved{
+  background:rgba(34,211,160,.08);
+  border-bottom:1px solid rgba(34,211,160,.2);
   animation:slide-down .2s ease;
 }
 @keyframes slide-down{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes banner-fade{0%{opacity:1}80%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
 .banner-inner{display:flex;align-items:center;justify-content:space-between;}
 .banner-l{display:flex;align-items:center;gap:10px;}
 .banner-dot{font-size:14px;color:var(--crit);animation:blink .4s infinite;}
+#banner.resolved .banner-dot{color:var(--ok);animation:none;}
 .banner-title{font-size:11px;font-weight:600;color:var(--crit);}
+#banner.resolved .banner-title{color:var(--ok);}
 .banner-sub{font-size:9px;color:rgba(255,77,77,.6);margin-top:1px;}
+#banner.resolved .banner-sub{color:rgba(34,211,160,.6);}
 #b-timer{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;color:var(--crit);}
+#banner.resolved #b-timer{color:var(--ok);}
+
+/* ── LIGHT / DARK TOGGLE ── */
+.theme-btn{
+  display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;
+  background:var(--b1);border:1px solid var(--b2);color:var(--muted);
+  font-size:10px;cursor:pointer;transition:all .2s;font-family:'IBM Plex Sans',sans-serif;
+}
+.theme-btn:hover{background:var(--b2);color:var(--text);}
+
+/* ── LIGHT MODE ── */
+body.light{
+  --bg:#f0f2f7;--s1:#ffffff;--s2:#f5f7fc;--s3:#ebeef5;
+  --b1:rgba(0,0,0,.07);--b2:rgba(0,0,0,.12);
+  --text:#1a1f35;--muted:#8892aa;--dim:#d0d5e8;
+}
+body.light .logo-name{color:#1a1f35;}
+body.light .flow-bar{background:#e8ebf4;border-color:rgba(0,0,0,.08);}
+body.light #b-timer{color:var(--crit);}
+body.light #banner.resolved #b-timer{color:var(--ok);}
 
 /* ── FLOW BAR ── */
 .flow-bar{
@@ -294,6 +323,7 @@ header{
     <span class="be-dot"></span>AI-API
   </div>
   <div class="h-right">
+    <button class="theme-btn" id="theme-toggle" onclick="toggleTheme()" title="Alternar Light/Dark">🌙 Dark</button>
     <button class="h-btn" onclick="openModal()">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Painéis
@@ -567,6 +597,31 @@ setInterval(()=>{ document.getElementById('clock').textContent=new Date().toLoca
 let timerInt=null, timerStart=null;
 function startTimer(){ timerStart=Date.now(); timerInt=setInterval(()=>{ const e=Math.floor((Date.now()-timerStart)/1000); document.getElementById('b-timer').textContent=`${String(Math.floor(e/60)).padStart(2,'0')}:${String(e%60).padStart(2,'0')}`; },1000); }
 function stopTimer(){ clearInterval(timerInt); timerInt=null; }
+
+function resolveBanner(msg, sub){
+  const banner = document.getElementById('banner');
+  stopTimer();
+  banner.classList.add('resolved');
+  document.getElementById('b-title').textContent = msg || '✓ INCIDENTE RESOLVIDO';
+  document.getElementById('b-sub').textContent   = sub  || 'Contenção automatizada concluída — sistema normalizado';
+  document.getElementById('b-timer').textContent = '✓';
+  setTimeout(()=>{
+    banner.style.animation = 'banner-fade .6s ease forwards';
+    setTimeout(()=>{
+      banner.style.display = 'none';
+      banner.style.animation = '';
+      banner.classList.remove('resolved');
+    }, 600);
+  }, 8000);
+}
+
+function toggleTheme(){
+  const isLight = document.body.classList.toggle('light');
+  const btn = document.getElementById('theme-toggle');
+  btn.textContent = isLight ? '🌙 Dark' : '☀️ Light';
+  localStorage.setItem('crisp-theme', isLight ? 'light' : 'dark');
+}
+(function(){ if(localStorage.getItem('crisp-theme')==='light'){ document.body.classList.add('light'); const b=document.getElementById('theme-toggle'); if(b) b.textContent='🌙 Dark'; } })();
 
 // ══════════════════════════════════════════════════════════════
 // LOG / ACTION HELPERS
@@ -947,7 +1002,7 @@ function runRansomware(){
 
   setTimeout(()=>{
     setMode('CONTENÇÃO','🔴','Ransomware — isolamento imediato em curso',true);
-    runPlaybook('ransomware',()=>{ addAction('🎯','CRISP: playbook ransomware concluído — 0 serviços críticos afetados','var(--ok)'); });
+    runPlaybook('ransomware',()=>{ addAction('🎯','CRISP: playbook ransomware concluído — 0 serviços críticos afetados','var(--ok)'); resolveBanner('✓ RANSOMWARE CONTIDO','WS-004 isolado — LockBit bloqueado — sistema normalizado'); });
     setRisk([{name:'WS-004',risk:96,impact:15,action:'QUARENTENA'},{name:'Zona Usuários',risk:52,impact:22,action:'ISOLAR'}]);
   },6500);
 
@@ -1002,7 +1057,7 @@ function runLateral(){
 
   setTimeout(()=>{
     setMode('ENDURECIMENTO','🟡','Isolar OT — proteger segmento Core',true);
-    runPlaybook('lateral',()=>{ addAction('🎯','CRISP: movimento lateral contido — Core protegido','var(--ok)'); });
+    runPlaybook('lateral',()=>{ addAction('🎯','CRISP: movimento lateral contido — Core protegido','var(--ok)'); resolveBanner('✓ MOVIMENTO LATERAL CONTIDO','OT-SENSOR-012 isolado — segmento Core protegido'); });
     setRisk([{name:'OT-SENSOR-012',risk:78,impact:58,action:'ISOLAR'},{name:'Core Infra',risk:32,impact:90,action:'ENDURECER'}]);
   },6000);
 
@@ -1056,7 +1111,7 @@ function runZeekTunnel(){
 
   setTimeout(()=>{
     setMode('BLOQUEAR-EXFIL','🔵','Bloquear exfiltração DNS — isolar host',true);
-    runPlaybook('dns_tunnel',()=>{ addAction('🎯','CRISP: exfiltração DNS contida. Zeek + FortiGate.','var(--ok)'); });
+    runPlaybook('dns_tunnel',()=>{ addAction('🎯','CRISP: exfiltração DNS contida. Zeek + FortiGate.','var(--ok)'); resolveBanner('✓ DNS TUNNELING BLOQUEADO','WS-021 isolado — DNS externo bloqueado — exfiltração encerrada'); });
     setRisk([{name:'WS-021',risk:73,impact:42,action:'BLOQUEAR DNS'},{name:'Zona Usuários',risk:38,impact:60,action:'MONITORAR'}]);
   },7500);
 
@@ -1113,7 +1168,7 @@ function runWazuhEDR(){
 
   setTimeout(()=>{
     setMode('EDR-CONTENÇÃO','🛡️','Wazuh Agent detectou execução — contenção automatizada',true);
-    runPlaybook('falcon_edr',()=>{ addAction('🎯','CRISP: Wazuh Agent + IA + SOAR — contenção automatizada concluída','var(--ok)'); });
+    runPlaybook('falcon_edr',()=>{ addAction('🎯','CRISP: Wazuh Agent + IA + SOAR — contenção automatizada concluída','var(--ok)'); resolveBanner('✓ EXECUÇÃO CONTIDA — WAZUH EDR','WORKSTATION-04 em quarentena — hash bloqueado — sistema normalizado'); });
     setRisk([{name:'WORKSTATION-04',risk:84,impact:57,action:'ISOLAR'},{name:'Zona Usuários',risk:42,impact:47,action:'MONITORAR'}]);
   },8500);
 
