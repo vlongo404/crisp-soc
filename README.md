@@ -70,6 +70,84 @@ Rede / Endpoints
 
 ---
 
+## 🖥️ Configuração do FortiGate VM (VMware)
+
+Se você não tem um FortiGate físico, pode usar a VM de avaliação gratuita.
+
+### 1. Baixar a imagem
+
+Acesse [support.fortinet.com](https://support.fortinet.com) → **Download > VM Images > FortiGate > VMware ESXi/Workstation**.  
+Recomendado: versão **7.6.x** (`.ovf` ou `.zip`).
+
+### 2. Importar no VMware Player / Workstation
+
+1. Abra o VMware → **Open a Virtual Machine** → selecione o arquivo `.ovf`
+2. Antes de ligar, vá em **VM > Settings > Network Adapter** e mude para **NAT**
+   - ⚠️ Não use Bridged — não funciona bem com Wi-Fi
+3. Ligue a VM
+
+### 3. Primeiro acesso via console
+
+No console da VM, faça login:
+- Usuário: `admin`
+- Senha: *(em branco — só Enter)*
+
+Se a senha em branco não funcionar (VM reimportada), use o login de recuperação:
+```
+usuário: maintainer
+senha:   bcpb + número_de_série_da_VM
+# Exemplo: bcpbFGVMEVZG1NG7OY41
+# O serial aparece na tela de boot da VM
+```
+
+### 4. Configurar IP via NAT (DHCP automático)
+
+```bash
+# No console FortiGate
+config system interface
+  edit port1
+    set mode dhcp
+    set allowaccess ping https ssh
+  next
+end
+
+# Ver o IP recebido
+get system interface physical
+```
+
+O IP será algo como `192.168.174.x` (rede VMnet8 do VMware NAT).
+
+### 5. Ativar licença de avaliação
+
+1. Acesse `https://<IP-do-FortiGate>` no navegador (aceite o certificado)
+2. Complete o wizard inicial
+3. Vá em **Dashboard > Licença** → clique em **Activate Evaluation License**
+4. Faça login com sua conta FortiCloud (crie em [forticloud.com](https://forticloud.com) se não tiver)
+5. A licença de avaliação é ativada automaticamente
+
+### 6. Criar o token da API REST
+
+1. No FortiGate web UI: **System > Administrators > Create New > REST API Admin**
+2. Nome: `crisp-api`
+3. Perfil: `super_admin` ou crie um perfil read-only
+4. Desmarque **PKI Group** se aparecer
+5. Clique em **OK** → copie o token gerado (aparece só uma vez)
+6. Cole no `proxy/.env`:
+   ```env
+   FG_HOST=192.168.174.129   # seu IP NAT
+   FG_TOKEN=token_copiado_aqui
+   ```
+
+### 7. Testar a conexão
+
+```powershell
+# No Windows, com o proxy rodando
+curl http://localhost:5000/health
+# Deve retornar: {"status":"ok","fortigate":"192.168.174.129",...}
+```
+
+---
+
 ## 🚀 Instalação
 
 ### 1. Clone o repositório
